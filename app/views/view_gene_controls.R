@@ -7,7 +7,7 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, observe, selectInput, div, icon, reactive],
+  shiny[NS, moduleServer, observe, selectInput, div, icon, reactive, updateSelectInput, req],
   shinydashboard[menuItem]
 )
 
@@ -24,22 +24,48 @@ ui_genes <- function(id) {
     tabName = "genes",
     div(style="margin-bottom:-20px;",
         selectInput(
+          inputId  = ns("geneGroup"),
+          label = "Group",
+          choices = NULL
+        )
+    ),
+    div(style="margin-bottom:-20px;",
+        selectInput(
           inputId  = ns("marker"),
           label    = "Marker",
           choices  = c("arrow","boxarrow","box","cbox","rbox"),
           selected = "arrow"
         )
     ),
-    div(style="margin-bottom:-5px;",
+    div(style="margin-bottom:-20px;",
         selectInput(
-          inputId  = ns("marker_size"),
+          inputId  = ns("markerSize"),
           label    = "Size",
           choices  = c("small","medium","large"),
           selected = "medium"
         )
     ),
+    div(style="margin-bottom:-20px;",
+        selectInput(
+          inputId  = ns("colorScheme"),
+          label    = "Color scheme",
+          choices  = c(
+            "Category10"   = "schemeCategory10",
+            "Tableau10"    = "schemeTableau10",
+            "Accent"       = "schemeAccent",
+            "Dark2"        = "schemeDark2",
+            "Paired"       = "schemePaired",
+            "Pastel1"      = "schemePastel1",
+            "Pastel2"      = "schemePastel2",
+            "Set1"         = "schemeSet1",
+            "Set2"         = "schemeSet2",
+            "Set3"         = "schemeSet3"
+          ),
+          selected = "Category10"
+        )
+    ),
     # extra space at the bottom of the menuItem
-    div(style="height:10px;")
+    div(style="height:20px;")
   )
 }
 
@@ -50,9 +76,21 @@ ui_genes <- function(id) {
 #' @export
 server_genes <- function(id, r = NULL) {
   moduleServer(id, function(input, output, session) {
+
+    observe({
+      req(r$cluster_data)
+      updateSelectInput(
+        session, "geneGroup",
+        choices = names(r$cluster_data),
+        selected = names(r$cluster_data)[1]
+      )
+    })
+
     reactive(list(
+      geneGroup = input$geneGroup,
       marker      = input$marker,
-      marker_size = input$marker_size
+      markerSize = input$markerSize,
+      colorScheme = input$colorScheme
     ))
   })
 }

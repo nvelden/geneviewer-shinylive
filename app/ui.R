@@ -3,7 +3,8 @@ library(shinydashboard)
 library(geneviewer)
 
 box::use(
-  ./views/view_gene_controls[ui_genes]
+  ./views/view_gene_controls[ui_genes],
+  ./views/view_label_controls[ui_labels]
 )
 
 # UI Definition
@@ -13,7 +14,8 @@ ui <- dashboardPage(
   ),
   dashboardSidebar(
     sidebarMenu(
-      ui_genes("gene_controls")
+      ui_genes("geneControls"),
+      ui_labels("labelControls")
     )
   ),
   dashboardBody(
