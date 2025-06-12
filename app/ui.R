@@ -5,7 +5,8 @@ library(geneviewer)
 box::use(
   ./views/view_gene_controls[ui_genes],
   ./views/view_label_controls[ui_labels],
-  ./views/view_scale_controls[ui_scale]
+  ./views/view_scale_controls[ui_scale],
+  ./views/view_scaleBar_controls[ui_scaleBar]
 )
 
 # UI Definition
@@ -17,7 +18,8 @@ ui <- dashboardPage(
     sidebarMenu(
       ui_genes("geneControls"),
       ui_labels("labelControls"),
-      ui_scale("scaleControls")
+      ui_scale("scaleControls"),
+      ui_scaleBar("scaleBarControls")
     )
   ),
   dashboardBody(

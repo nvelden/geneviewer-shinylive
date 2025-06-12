@@ -3,7 +3,8 @@ library(shiny)
 box::use(
   ./views/view_gene_controls[server_genes],
   ./views/view_label_controls[server_labels],
-  ./views/view_scale_controls[server_scale]
+  ./views/view_scale_controls[server_scale],
+  ./views/view_scaleBar_controls[server_scaleBar]
 )
 
 # Define server logic required to draw a histogram
@@ -18,6 +19,7 @@ function(input, output, session) {
   gene_inputs <- server_genes("geneControls", r = r)
   label_inputs <- server_labels("labelControls", r = r)
   scale_inputs <- server_scale("scaleControls", r = r)
+  scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -56,9 +58,15 @@ function(input, output, session) {
         axis_type = scale_inputs()$axisType,
         axis_position = scale_inputs()$axisPosition
       ) %>%
+      GC_scaleBar(
+        show = scaleBar_inputs()$showScaleBar,
+        title = scaleBar_inputs()$scaleBarTitle,
+        scaleBarUnit = scaleBar_inputs()$scaleBarUnit,
+        x = scaleBar_inputs()$scaleBarX,
+        y = scaleBar_inputs()$scaleBarY
+      ) %>%
       GC_clusterTitle(title = c("<i>O. olearius</i>", "<i>D. bispora</i>")) %>%
       GC_legend(position = "bottom") %>%
-      GC_scaleBar() %>%
       GC_clusterLabel(title = "ophA")
 
   })
