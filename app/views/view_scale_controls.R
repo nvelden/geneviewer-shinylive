@@ -107,6 +107,7 @@ ui_scale <- function(id) {
 #' Shiny server for GC scale controls
 #'
 #' @param id Namespace id for this module
+#' @param r A reactiveValues list to store inputs
 #' @export
 server_scale <- function(id, r = r) {
   moduleServer(id, function(input, output, session) {
