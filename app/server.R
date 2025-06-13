@@ -4,7 +4,9 @@ box::use(
   ./views/view_gene_controls[server_genes],
   ./views/view_label_controls[server_labels],
   ./views/view_scale_controls[server_scale],
-  ./views/view_scaleBar_controls[server_scaleBar]
+  ./views/view_scaleBar_controls[server_scaleBar],
+  ./views/view_clusterTitle_controls[server_clusterTitle],
+  ./views/view_legend_controls[server_legend]
 )
 
 # Define server logic required to draw a histogram
@@ -20,6 +22,8 @@ function(input, output, session) {
   label_inputs <- server_labels("labelControls", r = r)
   scale_inputs <- server_scale("scaleControls", r = r)
   scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
+  clusterTitle_inputs <- server_clusterTitle("clusterTitleControls", r = r)
+  legend_inputs <- server_legend("legendControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -65,8 +69,30 @@ function(input, output, session) {
         x = scaleBar_inputs()$scaleBarX,
         y = scaleBar_inputs()$scaleBarY
       ) %>%
-      GC_clusterTitle(title = c("<i>O. olearius</i>", "<i>D. bispora</i>")) %>%
-      GC_legend(position = "bottom") %>%
+      GC_clusterTitle(
+        title = clusterTitle_inputs()$title,
+        subtitle = clusterTitle_inputs()$subtitle,
+        titleFont = clusterTitle_inputs()$titleFont,
+        subtitleFont = clusterTitle_inputs()$subtitleFont,
+        show = clusterTitle_inputs()$show,
+        height = clusterTitle_inputs()$height,
+        x = clusterTitle_inputs()$x,
+        y = clusterTitle_inputs()$y,
+        align = clusterTitle_inputs()$align,
+        spacing = clusterTitle_inputs()$spacing
+      ) %>%
+      GC_legend(
+        group = gene_inputs()$geneGroup, # Use gene group
+        show = legend_inputs()$showLegend,
+        position = legend_inputs()$legendPosition,
+        x = legend_inputs()$legendX,
+        y = legend_inputs()$legendY,
+        legendTextOptions = list(
+          fontSize = legend_inputs()$legendFontSize,
+          fontFamily = legend_inputs()$legendFontFamily,
+          fill = legend_inputs()$legendFill
+          )
+        ) %>%
       GC_clusterLabel(title = "ophA")
 
   })
