@@ -82,8 +82,8 @@ function(input, output, session) {
         spacing = clusterTitle_inputs()$spacing
       ) %>%
       GC_legend(
-        group = gene_inputs()$geneGroup, # Use gene group
         show = legend_inputs()$showLegend,
+        group = gene_inputs()$geneGroup, # Use gene group
         position = legend_inputs()$legendPosition,
         x = legend_inputs()$legendX,
         y = legend_inputs()$legendY,

@@ -23,7 +23,7 @@ ui <- dashboardPage(
       ui_legend("legendControls"),
       ui_scale("scaleControls"),
       ui_scaleBar("scaleBarControls"),
-      ui_clusterTitle("clusterTitleControls"),
+      ui_clusterTitle("clusterTitleControls")
     )
   ),
   dashboardBody(

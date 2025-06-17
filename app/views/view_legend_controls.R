@@ -25,7 +25,7 @@ ui_legend <- function(id) {
         checkboxInput(
           inputId = ns("showLegend"),
           label   = "Show legend",
-          value   = TRUE
+          value   = FALSE
         )
     ),
     div(style = "margin-bottom:-20px;",
