@@ -10,7 +10,8 @@ box::use(
   ./views/view_clusterTitle_controls[ui_clusterTitle],
   ./views/view_clusterLabel_controls[ui_clusterLabel],
   ./views/view_legend_controls[ui_legend],
-  ./views/view_color_controls[ui_color]
+  ./views/view_color_controls[ui_color],
+  ./views/view_sequence_controls[ui_sequence]
 )
 
 # UI Definition
@@ -27,7 +28,8 @@ ui <- dashboardPage(
       ui_scaleBar("scaleBarControls"),
       ui_clusterTitle("clusterTitleControls"),
       ui_clusterLabel("clusterLabelControls"),
-      ui_color("colorControls")
+      ui_color("colorControls"),
+      ui_sequence("sequenceControls")
     )
   ),
   dashboardBody(

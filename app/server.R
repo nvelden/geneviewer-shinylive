@@ -9,6 +9,7 @@ box::use(
   ./views/view_clusterLabel_controls[server_clusterLabel],
   ./views/view_legend_controls[server_legend],
   ./views/view_color_controls[server_color],
+  ./views/view_sequence_controls[server_sequence],
   ./logic/utils[make_named_color_list]
 )
 
@@ -29,6 +30,7 @@ function(input, output, session) {
   clusterLabel_inputs <- server_clusterLabel("clusterLabelControls", r = r)
   legend_inputs <- server_legend("legendControls", r = r)
   color_inputs <- server_color("colorControls", r = r)
+  sequence_inputs <- server_sequence("sequenceControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -107,6 +109,18 @@ function(input, output, session) {
           fontWeight = clusterLabel_inputs()$clusterLabelFontWeight,
           fill = clusterLabel_inputs()$clusterLabelColor
         ) %>%
+      GC_sequence(
+        show = sequence_inputs()$showSequence,
+        y = sequence_inputs()$sequenceY,
+        sequenceStyle = list(
+          stroke = sequence_inputs()$sequenceStroke,
+          strokeWidth = sequence_inputs()$sequenceStrokeWidth
+        ),
+        markerStyle = list(
+          stroke = sequence_inputs()$sequenceMarkerStroke,
+          strokeWidth = sequence_inputs()$sequenceMarkerStrokeWidth
+        )
+      ) %>%
         GC_color(
           colorScheme = if (
             !is.null(color_inputs()$customColors) &&
