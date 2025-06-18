@@ -5,7 +5,8 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, checkboxInput, numericInput, textInput, div, icon],
+  shiny[NS, moduleServer, reactive, checkboxInput,
+        numericInput, textInput, div, icon, conditionalPanel],
   shinydashboard[menuItem]
 )
 
@@ -51,22 +52,27 @@ ui_sequence <- function(id) {
           step    = 0.1
         )
     ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId   = ns("markerStroke"),
-          label     = "Marker stroke color",
-          value     = "grey"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("markerStrokeWidth"),
-          label   = "Marker stroke width",
-          value   = 1,
-          step    = 0.1
-        )
-    ),
-    div(style = "height:20px;")
+    div(style = "height:20px;"),
+    conditionalPanel(
+      condition = "input['scaleControls-scaleBreaks'] == true",
+      # ns = ns,
+      div(style = "margin-bottom:-20px;",
+          textInput(
+            inputId   = ns("markerStroke"),
+            label     = "Marker stroke color",
+            value     = "grey"
+          )
+      ),
+      div(style = "margin-bottom:-20px;",
+          numericInput(
+            inputId = ns("markerStrokeWidth"),
+            label   = "Marker stroke width",
+            value   = 1,
+            step    = 0.1
+          )
+      ),
+      div(style = "height:20px;")
+    )
   )
 }
 
