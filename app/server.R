@@ -6,7 +6,10 @@ box::use(
   ./views/view_scale_controls[server_scale],
   ./views/view_scaleBar_controls[server_scaleBar],
   ./views/view_clusterTitle_controls[server_clusterTitle],
-  ./views/view_legend_controls[server_legend]
+  ./views/view_clusterLabel_controls[server_clusterLabel],
+  ./views/view_legend_controls[server_legend],
+  ./views/view_color_controls[server_color],
+  ./logic/utils[make_named_color_list]
 )
 
 # Define server logic required to draw a histogram
@@ -23,7 +26,9 @@ function(input, output, session) {
   scale_inputs <- server_scale("scaleControls", r = r)
   scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
   clusterTitle_inputs <- server_clusterTitle("clusterTitleControls", r = r)
+  clusterLabel_inputs <- server_clusterLabel("clusterLabelControls", r = r)
   legend_inputs <- server_legend("legendControls", r = r)
+  color_inputs <- server_color("colorControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -38,9 +43,7 @@ function(input, output, session) {
       GC_genes(
         group = gene_inputs()$geneGroup,
         marker = gene_inputs()$marker,
-        markerSize = gene_inputs()$markerSize,
-        colorScheme = gene_inputs()$colorScheme,
-        customColors = NULL
+        markerSize = gene_inputs()$markerSize
       ) %>%
       GC_labels(
         label = label_inputs()$labelGroup,
@@ -93,7 +96,24 @@ function(input, output, session) {
           fill = legend_inputs()$legendFill
           )
         ) %>%
-      GC_clusterLabel(title = "ophA")
+        GC_clusterLabel(
+          show = clusterLabel_inputs()$showCluster,
+          title = clusterLabel_inputs()$clusterLabel,
+          x = clusterLabel_inputs()$clusterLabelX,
+          y = clusterLabel_inputs()$clusterLabelY,
+          position = clusterLabel_inputs()$clusterLabelPosition,
+          fontSize = clusterLabel_inputs()$clusterLabelFontSize,
+          fontStyle = clusterLabel_inputs()$clusterLabelFontStyle,
+          fontWeight = clusterLabel_inputs()$clusterLabelFontWeight,
+          fill = clusterLabel_inputs()$clusterLabelColor
+        ) %>%
+        GC_color(
+          colorScheme = if (
+            !is.null(color_inputs()$customColors) &&
+            any(nzchar(color_inputs()$customColors))
+          ) NULL else color_inputs()$colorScheme,
+          customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
+        )
 
   })
 

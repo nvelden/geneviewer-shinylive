@@ -24,7 +24,7 @@ ui_clusterTitle <- function(id) {
         checkboxInput(
           inputId = ns("showTitle"),
           label   = "Show cluster title",
-          value   = TRUE
+          value   = FALSE
         )
     ),
     div(style = "margin-bottom:-20px;",

@@ -45,25 +45,6 @@ ui_genes <- function(id) {
           selected = "medium"
         )
     ),
-    div(style="margin-bottom:-20px;",
-        selectInput(
-          inputId  = ns("colorScheme"),
-          label    = "Color scheme",
-          choices  = c(
-            "Category10"   = "schemeCategory10",
-            "Tableau10"    = "schemeTableau10",
-            "Accent"       = "schemeAccent",
-            "Dark2"        = "schemeDark2",
-            "Paired"       = "schemePaired",
-            "Pastel1"      = "schemePastel1",
-            "Pastel2"      = "schemePastel2",
-            "Set1"         = "schemeSet1",
-            "Set2"         = "schemeSet2",
-            "Set3"         = "schemeSet3"
-          ),
-          selected = "Category10"
-        )
-    ),
     # extra space at the bottom of the menuItem
     div(style="height:20px;")
   )
@@ -89,8 +70,7 @@ server_genes <- function(id, r = NULL) {
     reactive(list(
       geneGroup = input$geneGroup,
       marker      = input$marker,
-      markerSize = input$markerSize,
-      colorScheme = input$colorScheme
+      markerSize = input$markerSize
     ))
   })
 }
