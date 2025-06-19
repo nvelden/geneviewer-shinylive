@@ -9,12 +9,12 @@ on:
         required: false
         default: 'false'
         type: boolean
-  
-  # Scheduled runs - customize these times
-schedule:
-  # Run at 7:00 AM AST (UTC-4) on Mon, Tue, Thu
-  - cron: '0 11 * * 1,2,4'
 
+  # Scheduled runs - customize these times
+  schedule:
+    # Run at 7:00 AM AST (UTC-4) on Mon, Tue, Thu
+    - cron: '0 11 * * 1,2,4'
+    
 jobs:
   register:
     runs-on: ubuntu-latest
