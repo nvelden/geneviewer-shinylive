@@ -1,7 +1,6 @@
 import logging
 import time
 import os
-from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -9,7 +8,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-load_dotenv()
+if os.path.exists(".env"):
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        logging.warning("python-dotenv not installed; ensure env variables are set")
 
 # ── CONFIG ───────────────────────────────────────────────────────────
 USERNAME         = os.getenv("USERNAME")
