@@ -1,7 +1,9 @@
 import logging
 import time
 import os
+# import pdb
 from selenium import webdriver
+from datetime import date, timedelta
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -25,8 +27,8 @@ DASHBOARD_URL    = "https://app.courtreserve.com/Online/Portal/Index/9175?forceD
 WAIT_TIMEOUT     = 10    
 MAX_RETRIES      = 6
 RETRY_DELAY      = 30
-
-BROWSER_VISIBLE = False
+NEXT_WEEK_DATE   = (date.today() + timedelta(weeks=1)).strftime("%b %d")
+BROWSER_VISIBLE = True
 # ───────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -70,19 +72,12 @@ def login_with_selenium():
         wait.until(EC.url_contains("/Online/Events/List"))
         logging.info("Events list loaded")
 
-        # 4) Filter to Today
-        today_label = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "label[for='dates-1']")))
-        time.sleep(3)  # brief pause for animation
-        today_label.click()
-        logging.info("Filtered to Today")
-
-        # 5) Click the first "Register"
         xpath_register = (
-            "//*[(self::a or self::button) and "
-            "translate(normalize-space(.),"
-            "'ABCDEFGHIJKLMNOPQRSTUVWXYZ',"
-            "'abcdefghijklmnopqrstuvwxyz')='register']"
+            f"//div[contains(@class,'fn-event-item')]"                                   
+            f"[.//span[contains(normalize-space(.),'{NEXT_WEEK_DATE}')]]"                 
+            "//a[normalize-space(text())='Register']"                                    
         )
+
         retries = 0
         while retries < MAX_RETRIES:
             try:
