@@ -72,7 +72,7 @@ def login_with_selenium():
 
         # 4) Filter to Today
         today_label = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "label[for='dates-1']")))
-        time.sleep(1)  # brief pause for animation
+        time.sleep(3)  # brief pause for animation
         today_label.click()
         logging.info("Filtered to Today")
 
@@ -104,6 +104,7 @@ def login_with_selenium():
         # 6) Click a second "Register" if it appears
         try:
             reg2 = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_register)))
+            time.sleep(3)
             reg2.click()
             logging.info("Clicked second Register")
         except TimeoutException:
