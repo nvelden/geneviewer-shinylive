@@ -46,8 +46,8 @@ jobs:
 
       - name: Run registration script
         env:
-          USERNAME: ${{ secrets.COURTRESERVE_USERNAME }}
-          PASSWORD: ${{ secrets.COURTRESERVE_PASSWORD }}
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
         run: |
           python courtreserve.py
 
