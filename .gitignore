@@ -1,0 +1,40 @@
+# Browser data and logs
+selenium.log
+*.log
+
+# Screenshots (if your selenium script takes any)
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Credentials and secrets
+.env
+.env.local
+.env.production
+.env.development
+config.json
+secrets.json
+credentials.json
+keys.json
+
+# Personal notes or temp files
+TODO.txt
+notes.txt
+temp/
+tmp/
