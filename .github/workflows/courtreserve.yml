@@ -1,7 +1,7 @@
 name: CourtReserve 4.0 Registration Bot
 
 on:
-  # Manual trigger - run whenever you want
+  # Manual trigger
   workflow_dispatch:
     inputs:
       debug_mode:
@@ -10,9 +10,8 @@ on:
         default: 'false'
         type: boolean
 
-  # Scheduled runs - customize these times
+  # Scheduled runs at 7 AM AST on Mon, Tue, Thu
   schedule:
-    # Run at 7:00 AM AST (UTC-4) on Mon, Tue, Thu
     - cron: '0 11 * * 1,2,4'
 
 jobs:
