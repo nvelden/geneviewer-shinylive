@@ -1,6 +1,7 @@
 import logging
 import time
 import os
+# import pdb
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -20,11 +21,11 @@ USERNAME         = os.getenv("USERNAME")
 PASSWORD         = os.getenv("PASSWORD")
 LOGIN_URL        = "https://app.courtreserve.com/account/login"
 SUCCESS_PATH     = "/Online/Portal/Index"
-PB_EVENTS_URL    = "https://app.courtreserve.com/Online/Events/List/9175?evTypeId=41411"
+PB_EVENTS_URL    = "https://app.courtreserve.com/Online/Events/List/9175?evTypeId=30892"
 DASHBOARD_URL    = "https://app.courtreserve.com/Online/Portal/Index/9175?forceDashboard=True"
-WAIT_TIMEOUT     = 10    
+WAIT_TIMEOUT     = 10    # seconds for explicit waits
 MAX_RETRIES      = 6
-RETRY_DELAY      = 30
+RETRY_DELAY      = 30     # seconds between retries
 
 BROWSER_VISIBLE = False
 # ───────────────────────────────────────────────────────────────────
@@ -108,17 +109,15 @@ def login_with_selenium():
             reg2.click()
             logging.info("Clicked second Register")
         except TimeoutException:
-            logging.info("No second Register element found")
+            logging.info("No second Register element found") 
 
-        # 7) Check the box for Niels
-        member_label = wait.until(EC.element_to_be_clickable((
+        # 7) Check the box for Niamh
+        label = wait.until(EC.element_to_be_clickable((
             By.XPATH,
-            "//table[@id='family-table-grid']"
-            "//tr[.//label[normalize-space()='Niels Van der Velden']]"
-            "//label[@for='CurrentMember_IsChecked']"
+            "//label[@for and normalize-space(text())='Niamh Mac Namara']"
         )))
-        member_label.click()
-        logging.info("Checked Niels Van der Velden")
+        label.click()
+        logging.info("Checked Niamh Mac Namara")
 
         # 8) Finalize registration
         finalize_btn = wait.until(EC.element_to_be_clickable((
