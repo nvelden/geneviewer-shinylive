@@ -79,6 +79,8 @@ def login_with_selenium():
             "//a[normalize-space(text())='Register']"                                    
         )
 
+        logging.info(f"Searching for Register button for date {NEXT_WEEK_DATE}")
+
         retries = 0
         while retries < MAX_RETRIES:
             try:
