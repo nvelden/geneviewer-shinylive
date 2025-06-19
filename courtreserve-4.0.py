@@ -125,7 +125,7 @@ def login_with_selenium():
             By.XPATH,
             "//button[normalize-space(text())='Finalize Registration']"
         )))
-        # finalize_btn.click()
+        finalize_btn.click()
         logging.info("Clicked Finalize Registration")
 
         # 9) Wait for dashboard redirect, or fallback to 3s wait

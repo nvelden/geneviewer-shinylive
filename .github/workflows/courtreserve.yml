@@ -44,7 +44,7 @@ jobs:
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          python courtreserve.py
+          python courtreserve-4.0.py
 
       - name: Upload logs (if any)
         if: always()
