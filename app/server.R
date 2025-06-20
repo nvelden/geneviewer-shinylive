@@ -10,6 +10,7 @@ box::use(
   ./views/view_legend_controls[server_legend],
   ./views/view_color_controls[server_color],
   ./views/view_sequence_controls[server_sequence],
+  ./views/view_coordinates_controls[server_coordinates],
   ./logic/utils[make_named_color_list]
 )
 
@@ -18,7 +19,7 @@ function(input, output, session) {
 
   r <- reactiveValues(
     input = list(),
-    cluster_data  = ophA_clusters  # <-- store your data here
+    cluster_data  = ophA_clusters
   )
 
   # inputs
@@ -31,6 +32,7 @@ function(input, output, session) {
   legend_inputs <- server_legend("legendControls", r = r)
   color_inputs <- server_color("colorControls", r = r)
   sequence_inputs <- server_sequence("sequenceControls", r = r)
+  coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -96,6 +98,22 @@ function(input, output, session) {
           fontSize = legend_inputs()$legendFontSize,
           fontFamily = legend_inputs()$legendFontFamily,
           fill = legend_inputs()$legendFill
+          )
+        ) %>%
+        GC_coordinates(
+          show = coordinates_inputs()$showCoordinates,
+          yPositionTop = coordinates_inputs()$yPositionTop,
+          yPositionBottom = coordinates_inputs()$yPositionBottom,
+          ticksFormat = coordinates_inputs()$ticksFormat,
+          tickStyle = list(
+            stroke = coordinates_inputs()$tickStroke,
+            strokeWidth = coordinates_inputs()$tickStrokeWidth,
+            lineLength = coordinates_inputs()$tickLineLength
+          ),
+          textStyle = list(
+          fill = coordinates_inputs()$textFill,
+          fontSize = coordinates_inputs()$fontSize,
+          fontFamily = coordinates_inputs()$fontFamily
           )
         ) %>%
         GC_clusterLabel(
