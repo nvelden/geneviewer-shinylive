@@ -1,7 +1,6 @@
 import logging
 import time
 import os
-# import pdb
 from selenium import webdriver
 from datetime import date, timedelta
 from selenium.webdriver.common.by import By
@@ -100,7 +99,11 @@ def login_with_selenium():
 
         # 6) Click a second "Register" if it appears
         try:
-            reg2 = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_register)))
+            second_register_xpath = (
+                "//div[contains(@class,'details-action-buttons')]"
+                "//a[contains(@class,'btn-register') and normalize-space(text())='Register']"
+            )
+            reg2 = wait.until(EC.element_to_be_clickable((By.XPATH, second_register_xpath)))
             time.sleep(3)
             reg2.click()
             logging.info("Clicked second Register")
