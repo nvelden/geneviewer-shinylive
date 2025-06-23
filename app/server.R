@@ -150,25 +150,32 @@ function(input, output, session) {
           customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
         )
 
-    # Display alignment warnings in shiny app
-    withCallingHandlers({
-    GC_chart_object %>%
-    GC_align(
-      id_column = alignment_inputs()$idColumn,
-      id = alignment_inputs()$id,
-      align = alignment_inputs()$align
-    )
-    },
-    warning = function(w) {
-      # show the warning in the UI as a yellow notification
-      showNotification(
-        paste("Warning:", conditionMessage(w)),
-        type = "warning",
-        duration = 5
-      )
-      # prevent the warning from also bubbling up to the console
-      invokeRestart("muffleWarning")
-    })
+    if(alignment_inputs()$alignGenes){
+      # Display alignment warnings in shiny app
+      withCallingHandlers({
+        GC_chart_object <-
+          GC_chart_object %>%
+          GC_align(
+            id_column = alignment_inputs()$idColumn,
+            id = alignment_inputs()$id,
+            align = alignment_inputs()$align
+          )
+      },
+      warning = function(w) {
+        # show the warning in the UI as a yellow notification
+        showNotification(
+          paste("Warning:", conditionMessage(w)),
+          type = "warning",
+          duration = 5
+        )
+        # prevent the warning from also bubbling up to the console
+        invokeRestart("muffleWarning")
+      })
+    }
+
+    GC_chart_object
+
   })
+
 
 }
