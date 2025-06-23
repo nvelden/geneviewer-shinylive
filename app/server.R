@@ -11,6 +11,7 @@ box::use(
   ./views/view_color_controls[server_color],
   ./views/view_sequence_controls[server_sequence],
   ./views/view_coordinates_controls[server_coordinates],
+  ./views/view_gene_alignment_controls[server_align],
   ./logic/utils[make_named_color_list]
 )
 
@@ -33,12 +34,14 @@ function(input, output, session) {
   color_inputs <- server_color("colorControls", r = r)
   sequence_inputs <- server_sequence("sequenceControls", r = r)
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
+  alignment_inputs <- server_align("alignmentControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
     req(gene_inputs()$geneGroup)
     req(label_inputs()$labelGroup)
 
+    GC_chart_object <-
     GC_chart(
       r$cluster_data,
       cluster = "cluster",
@@ -58,7 +61,7 @@ function(input, output, session) {
         fontWeight = label_inputs()$fontWeight,
         fill = label_inputs()$fill
       ) %>%
-       GC_scale(
+      GC_scale(
         hidden = scale_inputs()$scaleHidden,
         reverse = scale_inputs()$scaleReverse,
         scale_breaks = scale_inputs()$scaleBreaks,
@@ -147,6 +150,25 @@ function(input, output, session) {
           customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
         )
 
+    # Display alignment warnings in shiny app
+    withCallingHandlers({
+    GC_chart_object %>%
+    GC_align(
+      id_column = alignment_inputs()$idColumn,
+      id = alignment_inputs()$id,
+      align = alignment_inputs()$align
+    )
+    },
+    warning = function(w) {
+      # show the warning in the UI as a yellow notification
+      showNotification(
+        paste("Warning:", conditionMessage(w)),
+        type = "warning",
+        duration = 5
+      )
+      # prevent the warning from also bubbling up to the console
+      invokeRestart("muffleWarning")
+    })
   })
 
 }

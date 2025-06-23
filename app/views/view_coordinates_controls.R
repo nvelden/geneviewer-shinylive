@@ -58,13 +58,6 @@ ui_coordinates <- function(id) {
         )
     ),
     div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("tickStroke"),
-          label   = "Tick stroke",
-          value   = ""
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
         numericInput(
           inputId = ns("tickStrokeWidth"),
           label   = "Tick stroke width",
@@ -82,8 +75,15 @@ ui_coordinates <- function(id) {
     ),
     div(style = "margin-bottom:-20px;",
         textInput(
+          inputId = ns("tickStroke"),
+          label   = "Tick color",
+          value   = "black"
+        )
+    ),
+    div(style = "margin-bottom:-20px;",
+        textInput(
           inputId = ns("textFill"),
-          label   = "Color",
+          label   = "Text color",
           value   = "black"
         )
     ),

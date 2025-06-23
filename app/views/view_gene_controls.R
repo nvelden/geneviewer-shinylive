@@ -61,7 +61,8 @@ server_genes <- function(id, r = NULL) {
     observe({
       req(r$cluster_data)
       updateSelectInput(
-        session, "geneGroup",
+        session,
+        "geneGroup",
         choices = names(r$cluster_data),
         selected = names(r$cluster_data)[1]
       )

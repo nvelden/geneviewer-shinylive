@@ -21,7 +21,7 @@ box::use(
 ui_labels <- function(id) {
   ns <- NS(id)
   menuItem(
-    text    = "Labels",
+    text    = "Gene labels",
     icon    = icon("tags"),
     tabName = "labels",
     div(style="margin-bottom:-20px;",

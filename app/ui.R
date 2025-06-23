@@ -12,7 +12,8 @@ box::use(
   ./views/view_legend_controls[ui_legend],
   ./views/view_color_controls[ui_color],
   ./views/view_sequence_controls[ui_sequence],
-  ./views/view_coordinates_controls[ui_coordinates]
+  ./views/view_coordinates_controls[ui_coordinates],
+  ./views/view_gene_alignment_controls[ui_align]
 )
 
 # UI Definition
@@ -24,6 +25,7 @@ ui <- dashboardPage(
     sidebarMenu(
       ui_genes("geneControls"),
       ui_labels("labelControls"),
+      ui_align("alignmentControls"),
       ui_legend("legendControls"),
       ui_scale("scaleControls"),
       ui_scaleBar("scaleBarControls"),
