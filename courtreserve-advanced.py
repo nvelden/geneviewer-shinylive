@@ -27,9 +27,9 @@ DASHBOARD_URL    = "https://app.courtreserve.com/Online/Portal/Index/9175?forceD
 WAIT_TIMEOUT     = 10    # seconds for explicit waits
 MAX_RETRIES      = 6
 RETRY_DELAY      = 30     # seconds between retries
-NEXT_WEEK_DATE   = (date.today() + timedelta(weeks=1)).strftime("%b %d")
-
-BROWSER_VISIBLE = False
+dt = date.today() + timedelta(weeks=1)
+NEXT_WEEK_DATE = f"{dt.strftime('%b')} {dt.day}"
+BROWSER_VISIBLE = True
 # ───────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
