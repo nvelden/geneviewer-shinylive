@@ -150,7 +150,7 @@ function(input, output, session) {
           customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
         )
 
-    if(alignment_inputs()$alignGenes){
+    if(!is.null(alignment_inputs()$alignGenes) && alignment_inputs()$alignGenes){
       # Display alignment warnings in shiny app
       withCallingHandlers({
         GC_chart_object <-

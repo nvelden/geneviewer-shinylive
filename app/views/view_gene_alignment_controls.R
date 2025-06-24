@@ -96,12 +96,20 @@ server_align <- function(id, r = r) {
 
     aligned <- reactive({
       req(input$id, input$align, input$idColumn)
+
+      # Check if current id value exists in the selected column
+      available_ids <- unique(r$cluster_data[[input$idColumn]])
+      if (!input$id %in% available_ids) {
+        return(NULL)  # or return early/wait
+      }
+
       list(
         alignGenes = input$alignGenes,
         idColumn = input$idColumn,
         id = input$id,
         align = input$align
       )
+
     })
 
     ## Return that reactive
