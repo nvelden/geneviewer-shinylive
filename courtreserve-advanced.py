@@ -29,7 +29,7 @@ MAX_RETRIES      = 6
 RETRY_DELAY      = 30     # seconds between retries
 dt = date.today() + timedelta(weeks=1)
 NEXT_WEEK_DATE = f"{dt.strftime('%b')} {dt.day}"
-BROWSER_VISIBLE = True
+BROWSER_VISIBLE = False
 # ───────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
