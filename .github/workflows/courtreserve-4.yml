@@ -9,7 +9,7 @@ on:
         default: 'false'
         type: boolean
   schedule:
-    - cron: '59 9 * * 1,2,4'
+    - cron: '58 9 * * 1,2,4'
 
 jobs:
   register:
