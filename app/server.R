@@ -12,7 +12,8 @@ box::use(
   ./views/view_sequence_controls[server_sequence],
   ./views/view_coordinates_controls[server_coordinates],
   ./views/view_gene_alignment_controls[server_align],
-  ./logic/utils[make_named_color_list]
+  ./views/view_geneLinks_controls[server_links],
+  ./logic/utils[make_named_color_list],
 )
 
 # Define server logic required to draw a histogram
@@ -35,6 +36,7 @@ function(input, output, session) {
   sequence_inputs <- server_sequence("sequenceControls", r = r)
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
   alignment_inputs <- server_align("alignmentControls", r = r)
+  links_inputs <- server_links("linksControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -150,25 +152,74 @@ function(input, output, session) {
           customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
         )
 
+    ####################### Gene alignment #####################################
     if(!is.null(alignment_inputs()$alignGenes) && alignment_inputs()$alignGenes){
-      # Display alignment warnings in shiny app
-      withCallingHandlers({
+      # Display alignment warnings/errors in shiny app
+      tryCatch(
+        withCallingHandlers({
+          GC_chart_object <-
+            GC_chart_object %>%
+            GC_align(
+              id_column = alignment_inputs()$idColumn,
+              id = alignment_inputs()$id,
+              align = alignment_inputs()$align
+            )
+        },
+        warning = function(w) {
+          # Show the warning in the UI as a yellow notification
+          showNotification(
+            paste("Warning:", conditionMessage(w)),
+            type = "warning",
+            duration = 5
+          )
+          # Prevent the warning from also bubbling up to the console
+          invokeRestart("muffleWarning")
+        }),
+        error = function(e) {
+          # Show the error in the UI as a red notification
+          showNotification(
+            paste("Error:", conditionMessage(e)),
+            type = "error",
+            duration = 8
+          )
+          # Return the original object unchanged when there's an error
+          GC_chart_object
+        }
+      )
+    }
+
+    ####################### Gene links #########################################
+    if(!is.null(links_inputs()$show) && links_inputs()$show){
+      # Display alignment warnings/errors in shiny app
+      tryCatch({
         GC_chart_object <-
           GC_chart_object %>%
-          GC_align(
-            id_column = alignment_inputs()$idColumn,
-            id = alignment_inputs()$id,
-            align = alignment_inputs()$align
+          GC_links(
+            group = links_inputs()$group,
+            curve = links_inputs()$curve,
+            value1 = links_inputs()$value1,
+            value2 = links_inputs()$value2,
+            use_group_colors = links_inputs()$colorByGroup
           )
       },
+      error = function(e) {
+        # Show the error in the UI as a red notification
+        showNotification(
+          paste("Error:", conditionMessage(e)),
+          type = "error",
+          duration = 8
+        )
+        # Return the original object unchanged
+        GC_chart_object
+      },
       warning = function(w) {
-        # show the warning in the UI as a yellow notification
+        # Show warnings in the UI as yellow notifications
         showNotification(
           paste("Warning:", conditionMessage(w)),
           type = "warning",
           duration = 5
         )
-        # prevent the warning from also bubbling up to the console
+        # Continue execution and suppress the warning
         invokeRestart("muffleWarning")
       })
     }

@@ -13,7 +13,8 @@ box::use(
   ./views/view_color_controls[ui_color],
   ./views/view_sequence_controls[ui_sequence],
   ./views/view_coordinates_controls[ui_coordinates],
-  ./views/view_gene_alignment_controls[ui_align]
+  ./views/view_gene_alignment_controls[ui_align],
+  ./views/view_geneLinks_controls[ui_links]
 )
 
 # UI Definition
@@ -33,7 +34,8 @@ ui <- dashboardPage(
       ui_clusterLabel("clusterLabelControls"),
       ui_color("colorControls"),
       ui_sequence("sequenceControls"),
-      ui_coordinates("coordinatesControls")
+      ui_coordinates("coordinatesControls"),
+      ui_links("linksControls")
     )
   ),
   dashboardBody(
