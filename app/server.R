@@ -13,6 +13,7 @@ box::use(
   ./views/view_coordinates_controls[server_coordinates],
   ./views/view_gene_alignment_controls[server_align],
   ./views/view_geneLinks_controls[server_links],
+  ./views/view_dimension_controls[server_dimensions],
   ./logic/utils[make_named_color_list],
 )
 
@@ -37,6 +38,7 @@ function(input, output, session) {
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
   alignment_inputs <- server_align("alignmentControls", r = r)
   links_inputs <- server_links("linksControls", r = r)
+  dimensions_inputs <- server_dimensions("dimensionsControls", r = r)
 
   output$gcChart <- renderGC_chart({
 
@@ -47,8 +49,11 @@ function(input, output, session) {
     GC_chart(
       r$cluster_data,
       cluster = "cluster",
-      group = "class"
+      group = "class",
+      width = dimensions_inputs()$width,
+      height = dimensions_inputs()$height
     ) %>%
+      GC_grid(margin = dimensions_inputs()$margin) %>%
       GC_genes(
         group = gene_inputs()$geneGroup,
         marker = gene_inputs()$marker,

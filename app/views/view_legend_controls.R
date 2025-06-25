@@ -53,11 +53,9 @@ ui_legend <- function(id) {
         )
     ),
     div(style = "margin-bottom:-20px;",
-        sliderInput(
+        numericInput(
           inputId = ns("legendFontSize"),
           label = "Font size (px)",
-          min   = 6,
-          max   = 32,
           value = 12,
           step  = 1
         )

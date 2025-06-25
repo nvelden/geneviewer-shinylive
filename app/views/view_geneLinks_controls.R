@@ -18,7 +18,7 @@ box::use(
 ui_links <- function(id) {
   ns <- NS(id)
   menuItem(
-    text    = "Gene Links",
+    text    = "Gene links",
     icon    = icon("link"),
     tabName = "gcLinks",
     div(style = "margin-bottom:-20px;",

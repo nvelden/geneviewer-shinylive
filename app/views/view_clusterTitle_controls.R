@@ -17,7 +17,7 @@ box::use(
 ui_clusterTitle <- function(id) {
   ns <- NS(id)
   menuItem(
-    text    = "Cluster Title",
+    text    = "Cluster title",
     icon    = icon("heading"),
     tabName = "clustertitle",
     div(style = "margin-bottom:-20px;",

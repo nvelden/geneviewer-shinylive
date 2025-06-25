@@ -17,7 +17,7 @@ box::use(
 ui_clusterLabel <- function(id) {
   ns <- NS(id)
   menuItem(
-    text    = "Cluster Label",
+    text    = "Cluster label",
     icon    = icon("heading"),
     tabName = "clusterLabel",
     div(style = "margin-bottom:-20px;",

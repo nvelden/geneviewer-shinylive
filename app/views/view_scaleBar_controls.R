@@ -19,7 +19,7 @@ box::use(
 ui_scaleBar <- function(id) {
   ns <- NS(id)
   menuItem(
-    text    = "Scale Bar",
+    text    = "Scale bar",
     icon    = icon("ruler"),
     tabName = "scalebar",
     div(style = "margin-bottom:-20px;",

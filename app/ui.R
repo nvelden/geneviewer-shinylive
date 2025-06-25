@@ -14,6 +14,7 @@ box::use(
   ./views/view_sequence_controls[ui_sequence],
   ./views/view_coordinates_controls[ui_coordinates],
   ./views/view_gene_alignment_controls[ui_align],
+  ./views/view_dimension_controls[ui_dimensions],
   ./views/view_geneLinks_controls[ui_links]
 )
 
@@ -25,17 +26,18 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       ui_genes("geneControls"),
+      ui_sequence("sequenceControls"),
       ui_labels("labelControls"),
-      ui_align("alignmentControls"),
+      ui_links("linksControls"),
+      ui_clusterTitle("clusterTitleControls"),
+      ui_clusterLabel("clusterLabelControls"),
       ui_legend("legendControls"),
       ui_scale("scaleControls"),
       ui_scaleBar("scaleBarControls"),
-      ui_clusterTitle("clusterTitleControls"),
-      ui_clusterLabel("clusterLabelControls"),
-      ui_color("colorControls"),
-      ui_sequence("sequenceControls"),
       ui_coordinates("coordinatesControls"),
-      ui_links("linksControls")
+      ui_align("alignmentControls"),
+      ui_color("colorControls"),
+      ui_dimensions("dimensionsControls")
     )
   ),
   dashboardBody(
