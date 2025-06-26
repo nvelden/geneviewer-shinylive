@@ -6,6 +6,7 @@ box::use(
   ./views/view_scale_controls[server_scale],
   ./views/view_scaleBar_controls[server_scaleBar],
   ./views/view_clusterTitle_controls[server_clusterTitle],
+  ./views/view_clusterFooter_controls[server_clusterFooter],
   ./views/view_clusterLabel_controls[server_clusterLabel],
   ./views/view_legend_controls[server_legend],
   ./views/view_color_controls[server_color],
@@ -31,6 +32,7 @@ function(input, output, session) {
   scale_inputs <- server_scale("scaleControls", r = r)
   scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
   clusterTitle_inputs <- server_clusterTitle("clusterTitleControls", r = r)
+  clusterFooter_inputs <- server_clusterFooter("clusterFooterControls", r = r)
   clusterLabel_inputs <- server_clusterLabel("clusterLabelControls", r = r)
   legend_inputs <- server_legend("legendControls", r = r)
   color_inputs <- server_color("colorControls", r = r)
@@ -97,6 +99,18 @@ function(input, output, session) {
         y = clusterTitle_inputs()$y,
         align = clusterTitle_inputs()$align,
         spacing = clusterTitle_inputs()$spacing
+      ) %>%
+      GC_clusterFooter(
+        title = clusterFooter_inputs()$title,
+        subtitle = clusterFooter_inputs()$subtitle,
+        show = clusterFooter_inputs()$show,
+        subtitleFont = clusterFooter_inputs()$subtitleFont,
+        titleFont = clusterFooter_inputs()$titleFont,
+        height = clusterFooter_inputs()$height,
+        x = clusterFooter_inputs()$x,
+        y = clusterFooter_inputs()$y,
+        align = clusterFooter_inputs()$align,
+        spacing = clusterFooter_inputs()$spacing
       ) %>%
       GC_legend(
         show = legend_inputs()$showLegend,
