@@ -3,7 +3,7 @@ import time
 import os
 # import pdb
 from selenium import webdriver
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -26,9 +26,11 @@ PB_EVENTS_URL    = "https://app.courtreserve.com/Online/Events/List/9175?evTypeI
 DASHBOARD_URL    = "https://app.courtreserve.com/Online/Portal/Index/9175?forceDashboard=True"
 WAIT_TIMEOUT     = 10    # seconds for explicit waits
 MAX_RETRIES      = 6
-RETRY_DELAY      = 30     # seconds between retries
+RETRY_DELAY      = 5     # seconds between retries
 dt = date.today() + timedelta(weeks=1)
 NEXT_WEEK_DATE = f"{dt.strftime('%b')} {dt.day}"
+REGISTER_HOUR_UTC    = 10
+REGISTER_MINUTE_UTC  = 0
 BROWSER_VISIBLE = False
 # ───────────────────────────────────────────────────────────────────
 
@@ -72,6 +74,24 @@ def login_with_selenium():
         driver.get(PB_EVENTS_URL)
         wait.until(EC.url_contains("/Online/Events/List"))
         logging.info("Events list loaded")
+
+        # if it's before REGISTER_HOUR_UTC, sleep until that time in UTC —
+        now_utc = datetime.now(timezone.utc)
+        target = now_utc.replace(
+            hour=REGISTER_HOUR_UTC,
+            minute=REGISTER_MINUTE_UTC,
+            second=0,
+            microsecond=0
+        )
+        # if target rolled backwards (e.g. now is past the target), skip sleep
+        if now_utc < target:
+            wait_seconds = (target - now_utc).total_seconds()
+            logging.info(
+                f"Current UTC time is {now_utc.strftime('%H:%M:%S')}, "
+                f"before {REGISTER_HOUR_UTC:02d}:{REGISTER_MINUTE_UTC:02d} UTC — "
+                f"sleeping {int(wait_seconds)}s until then"
+            )
+            time.sleep(wait_seconds)
 
         xpath_register = (
             f"//div[contains(@class,'fn-event-item')]"                                   
