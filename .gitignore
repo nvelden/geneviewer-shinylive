@@ -11,3 +11,4 @@ geneviewer-shinylive.Rproj
 inst/.DS_Store
 CRAN-SUBMISSION
 /site
+/data
