@@ -3,6 +3,7 @@ library(shinydashboard)
 library(geneviewer)
 
 box::use(
+  ./views/view_load_controls[ui_load],
   ./views/view_gene_controls[ui_genes],
   ./views/view_label_controls[ui_labels],
   ./views/view_scale_controls[ui_scale],
@@ -26,6 +27,7 @@ ui <- dashboardPage(
   ),
   dashboardSidebar(
     sidebarMenu(
+      ui_load("loadControls"),
       ui_genes("geneControls"),
       ui_sequence("sequenceControls"),
       ui_labels("labelControls"),

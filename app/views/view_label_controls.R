@@ -7,7 +7,7 @@
 box::use(
   shiny[
     NS, moduleServer, observe, updateSelectInput, reactive,
-    checkboxInput, sliderInput, selectInput, icon, req,
+    checkboxInput, numericInput, selectInput, icon, req,
     textInput, div
   ],
   shinydashboard[menuItem]
@@ -69,13 +69,12 @@ ui_labels <- function(id) {
           selected = "sans-serif"
         )
     ),
-    div(style="margin-bottom:-20px;",
-        sliderInput(
+    div(style = "margin-bottom:-20px;",
+        numericInput(
           inputId = ns("fontSize"),
-          label   = "Font size (px)",
-          min     = 6,
-          max     = 24,
-          value   = 12
+          label = "Font size (px)",
+          value = 12,
+          step  = 1
         )
     ),
     ## extra space at the bottom

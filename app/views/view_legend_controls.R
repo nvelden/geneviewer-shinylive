@@ -6,7 +6,7 @@
 
 box::use(
   shiny[NS, moduleServer, reactive, selectInput, updateSelectInput, textInput,
-        checkboxInput, numericInput, icon, div, observe, req, sliderInput],
+        checkboxInput, numericInput, icon, div, observe, req],
   shinydashboard[menuItem]
 )
 
