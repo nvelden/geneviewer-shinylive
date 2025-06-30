@@ -44,11 +44,10 @@ jobs:
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          python courtreserve-advanced.py || {
-            echo "First run failed. Retrying..."
-            python courtreserve-advanced.py
-          }
-
+          if ! python courtreserve-advanced.py; then
+             echo "First run failed. Retrying..."
+             python courtreserve-advanced.py
+          fi
       - name: Upload logs (if any)
         if: always()
         uses: actions/upload-artifact@v4
