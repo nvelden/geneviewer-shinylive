@@ -24,13 +24,6 @@ ui_genes <- function(id) {
     tabName = "genes",
     div(style="margin-bottom:-20px;",
         selectInput(
-          inputId  = ns("geneGroup"),
-          label = "Group",
-          choices = NULL
-        )
-    ),
-    div(style="margin-bottom:-20px;",
-        selectInput(
           inputId  = ns("marker"),
           label    = "Marker",
           choices  = c("arrow","boxarrow","box","cbox","rbox"),
@@ -58,18 +51,7 @@ ui_genes <- function(id) {
 server_genes <- function(id, r = NULL) {
   moduleServer(id, function(input, output, session) {
 
-    observe({
-      req(r$cluster_data)
-      updateSelectInput(
-        session,
-        "geneGroup",
-        choices = names(r$cluster_data),
-        selected = names(r$cluster_data)[1]
-      )
-    })
-
     reactive(list(
-      geneGroup = input$geneGroup,
       marker      = input$marker,
       markerSize = input$markerSize
     ))

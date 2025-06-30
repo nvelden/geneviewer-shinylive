@@ -16,7 +16,7 @@ box::use(
   ./views/view_gene_alignment_controls[server_align],
   ./views/view_geneLinks_controls[server_links],
   ./views/view_dimension_controls[server_dimensions],
-  ./logic/utils[make_named_color_list],
+  ./logic/utils[make_named_color_list, order_cluster_data],
 )
 
 # Define server logic required to draw a histogram
@@ -51,13 +51,17 @@ function(input, output, session) {
 
   output$gcChart <- renderGC_chart({
 
-    req(gene_inputs()$geneGroup)
-    req(label_inputs()$labelGroup)
+    # Order cluster data
+    cluster_data_ordered <- order_cluster_data(
+      data = r$cluster_data,
+      cluster_col = r$input[["cluster"]],
+      order_vec = r$input[["cluster_order"]]
+    )
 
     GC_chart_object <- tryCatch(
       withCallingHandlers({
         GC_chart(
-          r$cluster_data,
+          cluster_data_ordered,
           start = r$input[["start"]],
           end = r$input[["end"]],
           cluster = r$input[["cluster"]],

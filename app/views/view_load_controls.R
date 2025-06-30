@@ -6,7 +6,7 @@
 
 box::use(
   shiny[NS, moduleServer, fileInput, reactive, req, div, icon, outputOptions,
-        observeEvent, showNotification, conditionalPanel, selectInput],
+        observeEvent, showNotification, conditionalPanel, selectInput, selectizeInput],
   shinydashboard[menuItem],
   ../logic/logic_load_controls[set_inputs_from_columns, synonyms],
   utils[read.csv],
@@ -31,10 +31,16 @@ ui_load <- function(id) {
           accept  = NULL  # Accept any file type
         )
     ),
+    shiny::tags$a(
+      href = "gene_cluster_example.csv",
+      target = "_blank",
+      style = "padding: 5px 15px 10px 15px; display: block;",
+      "Download example file"
+    ),
     shiny::conditionalPanel(
       condition = "output.fileUploaded",
       ns = ns,
-      div(style = "margin-top: 10px;",
+      div(style = "margin-top: 0px;",
 
           div(style = "margin-bottom: -20px;",
               selectInput(
@@ -58,6 +64,19 @@ ui_load <- function(id) {
                 label   = "Cluster",
                 choices = c("-- None selected --" = " "),
                 selected = " "
+              )
+          ),
+          div(style = "margin-bottom: -20px;",
+              shiny::conditionalPanel(
+                condition ="input['select_cluster'] !== ' '",
+                ns = ns,
+                selectizeInput(
+                  inputId = ns("cluster_order"),
+                  label   = "Order clusters",
+                  multiple = TRUE,
+                  choices = NULL,
+                  options = list(placeholder = 'Select a cluster value')
+                )
               )
           ),
           div(style = "margin-bottom: -20px;",
@@ -154,7 +173,47 @@ server_load <- function(id, r = r) {
 
     # Observe Cluster select input
     observeEvent(input$select_cluster, {
-      r$input[["cluster"]] <- if (!is.null(input$select_cluster) && nzchar(trimws(input$select_cluster))) input$select_cluster else NULL
+      if (!is.null(input$select_cluster) && nzchar(trimws(input$select_cluster))) {
+
+        r$input[["cluster"]] <- input$select_cluster
+
+        # Check column exists
+        if (!is.null(r$cluster_data) && input$select_cluster %in% names(r$cluster_data)) {
+          clusters <- unique(r$cluster_data[[r$input[["cluster"]]]])
+        } else {
+          clusters <- NULL
+        }
+
+        # Update selectizeInput
+        shiny::updateSelectizeInput(
+          session,
+          "cluster_order",
+          choices = NULL,
+          selected = NULL,
+          server = TRUE
+        )
+
+        shiny::updateSelectizeInput(
+          session,
+          "cluster_order",
+          choices = clusters,
+          selected = clusters,
+          server = TRUE
+        )
+
+      } else {
+        # Clear stored cluster selection
+        r$input[["cluster"]] <- NULL
+
+        # Clear cluster_order choices if cluster deselected
+        shiny::updateSelectizeInput(
+          session,
+          "cluster_order",
+          choices = character(0),
+          selected = character(0),
+          server = TRUE
+        )
+      }
     }, ignoreInit = TRUE)
 
     # Observe Group select input
@@ -166,6 +225,15 @@ server_load <- function(id, r = r) {
     observeEvent(input$select_strand, {
       r$input[["strand"]] <- if (!is.null(input$select_strand) && nzchar(trimws(input$select_strand))) input$select_strand else NULL
     }, ignoreInit = TRUE)
+
+    observeEvent(input$cluster_order, {
+      r$input[["cluster_order"]] <-
+        if (!is.null(input$cluster_order) && length(input$cluster_order) > 0) {
+          input$cluster_order
+        } else {
+          NULL
+        }
+    }, ignoreInit = TRUE, ignoreNULL = FALSE)
 
   })
 }

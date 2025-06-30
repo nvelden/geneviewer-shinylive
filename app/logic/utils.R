@@ -45,3 +45,38 @@ make_named_color_list <- function(df, group_col, cols) {
   # build named list
   setNames(as.list(assigned_cols), groups)
 }
+
+#' Reorder and filter a data frame based on user cluster order
+#'
+#' @param data A data frame (e.g. r$cluster_data)
+#' @param cluster_col Name of the cluster column (string)
+#' @param order_vec A character vector of desired cluster order
+#'
+#' @return A reordered and filtered data frame
+#' @export
+order_cluster_data <- function(data, cluster_col, order_vec) {
+
+  # Return original data if no valid inputs
+  if (is.null(cluster_col) ||
+      is.null(order_vec) ||
+      length(order_vec) == 0 ||
+      !cluster_col %in% names(data)) {
+    return(data)
+  }
+
+  df <- data
+
+  # Filter rows to keep only those clusters listed in order_vec
+  df <- df[df[[cluster_col]] %in% order_vec, , drop = FALSE]
+
+  # Apply factor to impose the desired order
+  df[[cluster_col]] <- factor(
+    df[[cluster_col]],
+    levels = order_vec
+  )
+
+  # Sort rows
+  df <- df[order(df[[cluster_col]]), ]
+
+  return(df)
+}
