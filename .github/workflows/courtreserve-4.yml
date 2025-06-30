@@ -44,8 +44,10 @@ jobs:
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: |
+        python courtreserve-4.0.py || {
+          echo "First run failed. Retrying..."
           python courtreserve-4.0.py
-
+        }
       - name: Upload logs (if any)
         if: always()
         uses: actions/upload-artifact@v4
