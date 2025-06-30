@@ -161,4 +161,9 @@ def login_with_selenium():
         driver.quit()
 
 if __name__ == "__main__":
-    login_with_selenium()
+    try:
+        login_with_selenium()
+    except Exception as e:
+        logging.error(f"First run failed with error: {e}")
+        logging.info("Retrying entire script once more...")
+        login_with_selenium()
