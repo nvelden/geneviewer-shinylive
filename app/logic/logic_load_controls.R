@@ -2,6 +2,9 @@
 #'
 #' Contains logic for loading and processing data for the Gene Cluster Dashboard.
 '.__module__.'
+box::use(
+  geneviewer[read_gbk, gbk_features_to_df],
+)
 
 #' Synonyms for standard input columns
 #'
@@ -61,3 +64,54 @@ set_inputs_from_columns <- function(data, r, input_names) {
     }
   }
 }
+
+#' Load gene data from a CSV file if the file is a CSV
+#'
+#' Checks the file extension to confirm whether the provided file
+#' is a CSV file. If so, the function reads and returns its contents
+#' as a data frame using \code{read.csv}. Otherwise, it returns \code{NULL}
+#' and prints a message indicating that the file is not a CSV.
+#'
+#' This is useful for safely loading user-uploaded files in Shiny apps
+#' or other pipelines where file types may vary.
+#'
+#' @param filepath A character string indicating the path to the file.
+#' @return A data frame if the file is a CSV, or \code{NULL} otherwise.
+#' @export
+#' Load gene data from either a CSV or GBK file
+#'
+#' Checks the file extension and loads data accordingly:
+#' - For CSV files, reads data via \code{read.csv}.
+#' - For GBK files, parses the GenBank file and extracts features
+#'   based on predefined feature keys.
+#'
+#' @param filepath Path to the input file
+#' @return A data.frame containing the gene data
+#' @export
+load_gene_data <- function(filepath) {
+  ext <- tolower(tools::file_ext(filepath))
+
+  if (ext == "csv") {
+    df <- read.csv(filepath, stringsAsFactors = FALSE)
+    return(df)
+
+  } else if (ext == "gbk") {
+    gbk_features <- c(
+      "start", "end", "strand", "cluster",
+      "protein_id", "gene_functions", "product",
+      "gene_kind", "score", "gene",
+      "GO_function", "GO_process"
+    )
+
+    gbk <- read_gbk(filepath, origin = FALSE)
+    df <- gbk_features_to_df(
+      gbk
+      # keys = gbk_features
+    )
+    return(df)
+
+  } else {
+    stop("Unsupported file type: only CSV or GBK files are allowed.")
+  }
+}
+

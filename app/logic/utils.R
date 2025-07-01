@@ -3,8 +3,6 @@
 #'
 #' Common utility functions for the Gene Cluster Dashboard.
 '.__module__.'
-
-'.__module__.'
 box::use(
   stats[setNames],
 )

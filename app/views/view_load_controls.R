@@ -8,7 +8,7 @@ box::use(
   shiny[NS, moduleServer, fileInput, reactive, req, div, icon, outputOptions,
         observeEvent, showNotification, conditionalPanel, selectInput, selectizeInput],
   shinydashboard[menuItem],
-  ../logic/logic_load_controls[set_inputs_from_columns, synonyms],
+  ../logic/logic_load_controls[set_inputs_from_columns, synonyms, load_gene_data],
   utils[read.csv],
   stats[setNames]
 )
@@ -72,7 +72,7 @@ ui_load <- function(id) {
                 ns = ns,
                 selectizeInput(
                   inputId = ns("cluster_order"),
-                  label   = "Order clusters",
+                  label   = "Select clusters",
                   multiple = TRUE,
                   choices = NULL,
                   options = list(placeholder = 'Select a cluster value')
@@ -118,7 +118,7 @@ server_load <- function(id, r = r) {
       req(input$geneDataFile)
       tryCatch({
 
-        r$cluster_data <- read.csv(input$geneDataFile$datapath, stringsAsFactors = FALSE)
+        r$cluster_data <- load_gene_data(input$geneDataFile$datapath)
 
         set_inputs_from_columns(
           data = r$cluster_data,
