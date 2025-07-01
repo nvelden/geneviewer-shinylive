@@ -24,8 +24,8 @@ SUCCESS_PATH     = "/Online/Portal/Index"
 PB_EVENTS_URL    = "https://app.courtreserve.com/Online/Events/List/9175?evTypeId=41411"
 DASHBOARD_URL    = "https://app.courtreserve.com/Online/Portal/Index/9175?forceDashboard=True"
 WAIT_TIMEOUT     = 10    
-MAX_RETRIES      = 6
-RETRY_DELAY      = 5
+MAX_RETRIES      = 10
+RETRY_DELAY      = 1
 dt = date.today() + timedelta(weeks=1)
 NEXT_WEEK_DATE = f"{dt.strftime('%b')} {dt.day}"
 REGISTER_HOUR_UTC    = 10
@@ -101,11 +101,13 @@ def login_with_selenium():
 
         logging.info(f"Searching for Register button for date {NEXT_WEEK_DATE}")
 
+        fast_wait = WebDriverWait(driver, 2)
+
         retries = 0
         while retries < MAX_RETRIES:
             try:
-                reg = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_register)))
-                reg.click()
+                reg = fast_wait.until(EC.element_to_be_clickable((By.XPATH, xpath_register)))
+                driver.execute_script("arguments[0].click();", reg)
                 logging.info("Clicked first Register")
                 break
             except TimeoutException:
@@ -126,8 +128,7 @@ def login_with_selenium():
                 "//a[contains(@class,'btn-register') and normalize-space(text())='Register']"
             )
             reg2 = wait.until(EC.element_to_be_clickable((By.XPATH, second_register_xpath)))
-            time.sleep(3)
-            reg2.click()
+            driver.execute_script("arguments[0].click();", reg2)
             logging.info("Clicked second Register")
         except TimeoutException:
             logging.info("No second Register element found")
