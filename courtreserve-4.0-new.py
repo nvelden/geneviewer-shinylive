@@ -115,13 +115,14 @@ def login_and_scrape():
                 "//a[contains(@class,'btn-register') and normalize-space(text())='Register']"
             )
 
-            fast_wait = WebDriverWait(driver, 2)
+            fast_wait = WebDriverWait(driver, 4)
             retries = 0
             while retries < MAX_RETRIES:
                 try:
                     reg2 = fast_wait.until(EC.element_to_be_clickable((By.XPATH, second_register_xpath)))
+                    button_text = reg2.text.strip()
                     driver.execute_script("arguments[0].click();", reg2)
-                    logging.info(f"Clicked button: [{reg2.text.strip()}]")
+                    logging.info(f"Clicked button: [{button_text}]")
                     break
                 except TimeoutException:
                     retries += 1
