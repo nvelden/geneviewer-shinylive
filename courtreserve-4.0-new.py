@@ -59,8 +59,8 @@ def login_and_scrape():
         # 1) Log in
         driver.get(LOGIN_URL)
         logging.info("Opening login page")
-        user_in = wait.until(EC.visibility_of_element_located((By.ID, "Username")))
-        pass_in = wait.until(EC.visibility_of_element_located((By.ID, "Password")))
+        user_in = wait.until(EC.visibility_of_element_located((By.NAME, "email")))
+        pass_in = wait.until(EC.visibility_of_element_located((By.NAME, "password")))
         user_in.clear()
         user_in.send_keys(USERNAME)
         pass_in.clear()
