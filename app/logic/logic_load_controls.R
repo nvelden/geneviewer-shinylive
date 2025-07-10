@@ -4,6 +4,9 @@
 '.__module__.'
 box::use(
   geneviewer[read_gbk, gbk_features_to_df],
+  utils[read.csv],
+  dplyr[bind_rows],
+  tools[file_path_sans_ext]
 )
 
 #' Synonyms for standard input columns
@@ -65,53 +68,89 @@ set_inputs_from_columns <- function(data, r, input_names) {
   }
 }
 
-#' Load gene data from a CSV file if the file is a CSV
+#' Load gene data from CSV file(s)
 #'
-#' Checks the file extension to confirm whether the provided file
-#' is a CSV file. If so, the function reads and returns its contents
-#' as a data frame using \code{read.csv}. Otherwise, it returns \code{NULL}
-#' and prints a message indicating that the file is not a CSV.
-#'
-#' This is useful for safely loading user-uploaded files in Shiny apps
-#' or other pipelines where file types may vary.
-#'
-#' @param filepath A character string indicating the path to the file.
-#' @return A data frame if the file is a CSV, or \code{NULL} otherwise.
+#' @param filepaths Character vector of CSV file paths
+#' @return Combined data frame
 #' @export
-#' Load gene data from either a CSV or GBK file
+load_csv <- function(filepaths) {
+  dfs <- lapply(filepaths, function(fp) {
+    read.csv(fp, stringsAsFactors = FALSE)
+  })
+  bind_rows(dfs)
+}
+
+#' Load gene data from GBK file(s)
 #'
-#' Checks the file extension and loads data accordingly:
-#' - For CSV files, reads data via \code{read.csv}.
-#' - For GBK files, parses the GenBank file and extracts features
-#'   based on predefined feature keys.
-#'
-#' @param filepath Path to the input file
-#' @return A data.frame containing the gene data
+#' @param filepaths Character vector of GBK file paths
+#' @param filenames Character vector of original file names (same length as filepaths)
+#' @return Combined data frame
 #' @export
-load_gene_data <- function(filepath) {
-  ext <- tolower(tools::file_ext(filepath))
+load_gbk <- function(filepaths, filenames) {
+  if (length(filepaths) != length(filenames)) {
+    stop("filepaths and filenames must have the same length.")
+  }
+
+  gbk_features <- c(
+    "start", "end", "strand", "cluster",
+    "protein_id", "gene_functions", "product",
+    "gene_kind", "score", "gene",
+    "GO_function", "GO_process"
+  )
+
+  dfs <- Map(function(fp, fn) {
+    gbk <- read_gbk(fp, origin = FALSE)
+    df <- gbk_features_to_df(gbk)
+
+    # extract file name without extension
+    file_name <- tools::file_path_sans_ext(basename(fn))
+
+    # add or replace 'cluster' column
+    df$cluster <- file_name
+
+    df
+  }, filepaths, filenames)
+
+  dplyr::bind_rows(dfs)
+}
+
+#' Load gene data from a list of CSV or GBK files (not mixed)
+#'
+#' @param fileInput A data frame from Shiny fileInput() or a character vector of file paths
+#' @return Combined data frame
+#' @export
+load_gene_data <- function(fileInput) {
+
+  # If fileInput is a data frame from fileInput()
+  if (is.data.frame(fileInput) && all(c("datapath", "name") %in% names(fileInput))) {
+    filepaths <- fileInput$datapath
+    filenames <- fileInput$name
+  } else if (is.character(fileInput)) {
+    filepaths <- fileInput
+    filenames <- basename(fileInput)
+  } else {
+    stop("fileInput must be either a character vector of file paths or a data frame from fileInput().")
+  }
+
+  if (length(filepaths) == 0) {
+    stop("No file paths provided.")
+  }
+
+  # Determine file extensions based on original filenames
+  extensions <- unique(tolower(tools::file_ext(filenames)))
+
+  if (length(extensions) > 1) {
+    stop("Files must all be of the same type. Mixing CSV and GBK files is not allowed.")
+  }
+
+  ext <- extensions[1]
 
   if (ext == "csv") {
-    df <- read.csv(filepath, stringsAsFactors = FALSE)
-    return(df)
-
-  } else if (ext == "gbk") {
-    gbk_features <- c(
-      "start", "end", "strand", "cluster",
-      "protein_id", "gene_functions", "product",
-      "gene_kind", "score", "gene",
-      "GO_function", "GO_process"
-    )
-
-    gbk <- read_gbk(filepath, origin = FALSE)
-    df <- gbk_features_to_df(
-      gbk
-      # keys = gbk_features
-    )
-    return(df)
-
+    return(load_csv(filepaths))
+  } else if (ext %in% c("gbk", "gb")) {
+    return(load_gbk(filepaths, filenames))
   } else {
-    stop("Unsupported file type: only CSV or GBK files are allowed.")
+    stop(paste("Unsupported file type:", ext))
   }
 }
 

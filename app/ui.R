@@ -17,7 +17,8 @@ box::use(
   ./views/view_coordinates_controls[ui_coordinates],
   ./views/view_gene_alignment_controls[ui_align],
   ./views/view_dimension_controls[ui_dimensions],
-  ./views/view_geneLinks_controls[ui_links]
+  ./views/view_geneLinks_controls[ui_links],
+  ./views/view_tooltip_controls[ui_tooltip]
 )
 
 # UI Definition
@@ -40,6 +41,7 @@ ui <- dashboardPage(
       ui_scaleBar("scaleBarControls"),
       ui_coordinates("coordinatesControls"),
       ui_align("alignmentControls"),
+      ui_tooltip("tooltipControls"),
       ui_color("colorControls"),
       ui_dimensions("dimensionsControls")
     )

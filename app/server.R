@@ -16,6 +16,7 @@ box::use(
   ./views/view_gene_alignment_controls[server_align],
   ./views/view_geneLinks_controls[server_links],
   ./views/view_dimension_controls[server_dimensions],
+  ./views/view_tooltip_controls[server_tooltip],
   ./logic/utils[make_named_color_list, order_cluster_data],
 )
 
@@ -47,6 +48,7 @@ function(input, output, session) {
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
   alignment_inputs <- server_align("alignmentControls", r = r)
   links_inputs <- server_links("linksControls", r = r)
+  tooltip_inputs <- server_tooltip("tooltipControls", r = r)
   dimensions_inputs <- server_dimensions("dimensionsControls", r = r)
 
   output$gcChart <- renderGC_chart({
@@ -55,7 +57,7 @@ function(input, output, session) {
     cluster_data_ordered <- order_cluster_data(
       data = r$cluster_data,
       cluster_col = r$input[["cluster"]],
-      order_vec = r$input[["cluster_order"]]
+      order_vec = r$input[["select_order"]]
     )
 
     GC_chart_object <- tryCatch(
@@ -184,6 +186,10 @@ function(input, output, session) {
               any(nzchar(color_inputs()$customColors))
             ) NULL else color_inputs()$colorScheme,
             customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
+          ) %>%
+          GC_tooltip(
+            show = tooltip_inputs()$show,
+            formatter = tooltip_inputs()$formatter
           )
       },
       warning = function(w) {
