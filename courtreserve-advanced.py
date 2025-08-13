@@ -132,13 +132,20 @@ def login_with_selenium():
         except TimeoutException:
             logging.info("No second Register element found") 
 
-        # 7) Check the box for Niamh
-        label = wait.until(EC.element_to_be_clickable((
+        # 7) Check the box for Niamh and Niels
+        labelNiamh = wait.until(EC.element_to_be_clickable((
             By.XPATH,
             "//label[@for and normalize-space(text())='Niamh Mac Namara']"
         )))
-        label.click()
+        labelNiamh.click()
         logging.info("Checked Niamh Mac Namara")
+
+        labelNiels = wait.until(EC.element_to_be_clickable((
+            By.XPATH,
+            "//label[@for and normalize-space(text())='Niels Van der Velden']"
+        )))
+        labelNiels.click()
+        logging.info("Checked Niels Van der Velden")
 
         # 8) Finalize registration
         finalize_btn = wait.until(EC.element_to_be_clickable((
