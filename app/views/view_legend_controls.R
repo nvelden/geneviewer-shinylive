@@ -6,7 +6,7 @@
 
 box::use(
   shiny[NS, moduleServer, reactive, selectInput, updateSelectInput, textInput,
-        checkboxInput, numericInput, icon, div, observe, req],
+        checkboxInput, numericInput, icon, div, observe, req, actionLink, observeEvent],
   shinydashboard[menuItem]
 )
 
@@ -44,13 +44,19 @@ ui_legend <- function(id) {
           step  = 1
         )
     ),
-    div(style = "margin-bottom:-20px;",
+    div(style = "",
         numericInput(
           inputId = ns("legendY"),
           label = "Y-position",
           value = 0,
           step  = 1
         )
+    ),
+    div(style = "padding-top: 10px, padding-top: 20px",
+    actionLink(ns("legendStyling"), "Styling",
+               class = "btn-info",
+               style = "background-color:transparent;"
+      )
     ),
     div(style = "margin-bottom:-20px;",
         numericInput(
@@ -85,6 +91,11 @@ ui_legend <- function(id) {
 #' @export
 server_legend <- function(id, r = NULL) {
   moduleServer(id, function(input, output, session) {
+
+    # Input for labelcontrols module
+    observeEvent(input$legendStyling, {
+      r$legend$Styling <- input$legendStyling
+    })
 
     reactive({
       list(

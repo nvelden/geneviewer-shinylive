@@ -23,7 +23,7 @@ ui_clusterLabel <- function(id) {
     div(style = "margin-bottom:-20px;",
         checkboxInput(
           inputId = ns("showClusterLabel"),
-          label   = "Show cluster title",
+          label   = "Show cluster label",
           value   = FALSE
         )
     ),
@@ -46,7 +46,7 @@ ui_clusterLabel <- function(id) {
         numericInput(
           inputId = ns("clusterLabelY"),
           label   = "Title Y-position",
-          value   = 5,
+          value   = 0,
           step    = 1
         )
     ),

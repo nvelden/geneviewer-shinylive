@@ -1,5 +1,7 @@
 library(shiny)
+library(shinyjqui)
 library(shinydashboard)
+library(shinydashboardPlus)
 library(geneviewer)
 
 box::use(
@@ -12,6 +14,7 @@ box::use(
   ./views/view_clusterFooter_controls[ui_clusterFooter],
   ./views/view_clusterLabel_controls[ui_clusterLabel],
   ./views/view_legend_controls[ui_legend],
+  ./views/view_legendStyling_controls[ui_legendStyling],
   ./views/view_color_controls[ui_color],
   ./views/view_sequence_controls[ui_sequence],
   ./views/view_coordinates_controls[ui_coordinates],
@@ -47,6 +50,8 @@ ui <- dashboardPage(
     )
   ),
   dashboardBody(
+    shinyjs::useShinyjs(),
+    ui_legendStyling("legendStylingControls"),
     fluidRow(
       box(
         title       = "Gene Cluster Chart",

@@ -80,6 +80,33 @@ load_csv <- function(filepaths) {
   bind_rows(dfs)
 }
 
+#' Load gene data from FASTA file(s)
+#'
+#' @param filepaths Character vector of FASTA file paths
+#' @return Combined data frame
+#' @export
+load_fasta <- function(filepaths) {
+  if (length(filepaths) == 1 && dir.exists(filepaths)) {
+    # Read all FASTA files from a directory
+    df <- geneviewer::read_fasta(
+      fasta_path     = filepaths,
+      sequence       = TRUE,
+      file_extension = "fasta"
+    )
+  } else {
+    # Combine multiple single-file reads
+    dfs <- lapply(filepaths, function(fp) {
+      geneviewer::read_fasta(
+        fasta_path = fp,
+        sequence   = TRUE
+      )
+    })
+    df <- dplyr::bind_rows(dfs)
+  }
+
+  return(df)
+}
+
 #' Load gene data from GBK file(s)
 #'
 #' @param filepaths Character vector of GBK file paths
@@ -149,6 +176,8 @@ load_gene_data <- function(fileInput) {
     return(load_csv(filepaths))
   } else if (ext %in% c("gbk", "gb")) {
     return(load_gbk(filepaths, filenames))
+  } else if (ext %in% c("fasta", "fa", "faa")) {
+    return(load_fasta(filepaths))
   } else {
     stop(paste("Unsupported file type:", ext))
   }

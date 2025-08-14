@@ -123,6 +123,7 @@ server_load <- function(id, r = r) {
 
     observeEvent(input$geneDataFile, {
       req(input$geneDataFile)
+
       tryCatch({
 
         r$cluster_data <- load_gene_data(input$geneDataFile)

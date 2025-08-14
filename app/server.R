@@ -10,6 +10,7 @@ box::use(
   ./views/view_clusterFooter_controls[server_clusterFooter],
   ./views/view_clusterLabel_controls[server_clusterLabel],
   ./views/view_legend_controls[server_legend],
+  ./views/view_legendStyling_controls[server_legendStyling],
   ./views/view_color_controls[server_color],
   ./views/view_sequence_controls[server_sequence],
   ./views/view_coordinates_controls[server_coordinates],
@@ -44,6 +45,7 @@ function(input, output, session) {
   clusterFooter_inputs <- server_clusterFooter("clusterFooterControls", r = r)
   clusterLabel_inputs <- server_clusterLabel("clusterLabelControls", r = r)
   legend_inputs <- server_legend("legendControls", r = r)
+  legendStyling_inputs <- server_legendStyling("legendStylingControls", r = r)
   color_inputs <- server_color("colorControls", r = r)
   sequence_inputs <- server_sequence("sequenceControls", r = r)
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
