@@ -140,9 +140,9 @@ function(input, output, session) {
               x = legend_inputs()$legendX,
               y = legend_inputs()$legendY,
               legendTextOptions = list(
-                fontSize = legend_inputs()$legendFontSize,
-                fontFamily = legend_inputs()$legendFontFamily,
-                fill = legend_inputs()$legendFill
+                fontSize = legendStyling_inputs()$legendFontSize,
+                fontFamily = legendStyling_inputs()$legendFontFamily,
+                fill = legendStyling_inputs()$legendFill
               )
             ) %>%
             GC_coordinates(

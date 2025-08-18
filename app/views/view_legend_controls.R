@@ -25,7 +25,7 @@ ui_legend <- function(id) {
         checkboxInput(
           inputId = ns("showLegend"),
           label   = "Show legend",
-          value   = FALSE
+          value   = TRUE
         )
     ),
     div(style = "margin-bottom:-20px;",
@@ -57,29 +57,6 @@ ui_legend <- function(id) {
                class = "btn-info",
                style = "background-color:transparent;"
       )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("legendFontSize"),
-          label = "Font size (px)",
-          value = 12,
-          step  = 1
-        )
-    ),
-    div(style="margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("legendFontFamily"),
-          label   = "Font family",
-          choices = c("sans-serif", "serif", "monospace", "cursive", "fantasy"),
-          selected = "sans-serif"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("legendFill"),
-          label = "Text color",
-          value = "black"
-        )
     ),
     div(style = "height:20px;")
   )
