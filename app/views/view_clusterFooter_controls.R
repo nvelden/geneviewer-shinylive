@@ -4,7 +4,8 @@
 #' for controlling the GC cluster footer in the Gene Cluster Dashboard.
 '.__module__.'
 box::use(
-  shiny[NS, moduleServer, reactive, textInput, numericInput, selectInput, checkboxInput, icon, div],
+  shiny[NS, moduleServer, reactive, textInput, numericInput, selectInput, checkboxInput, icon, div,
+        observeEvent, actionLink],
   shinydashboard[menuItem],
   ../logic/utils[parse_delimited_input]
 )
@@ -42,110 +43,12 @@ ui_clusterFooter <- function(id) {
           value = ""
         )
     ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("height"),
-          label = "Footer height",
-          value = "40px"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("x"),
-          label = "X-position",
-          value = 0,
-          step = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("y"),
-          label = "Y-position",
-          value = 5,
-          step = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("align"),
-          label = "Alignment",
-          choices = c("left", "center", "right"),
-          selected = "center"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("spacing"),
-          label = "Spacing",
-          value = 20,
-          min = 0,
-          step = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("footerFontSize"),
-          label = "Footer font size (px)",
-          value = 14,
-          min = 8,
-          max = 48,
-          step = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("footerFontWeight"),
-          label = "Footer font weight",
-          choices = c("normal", "bold", "lighter", "bolder"),
-          selected = "normal"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("footerFontFamily"),
-          label = "Footer font family",
-          choices = c("sans-serif", "serif", "monospace", "Arial", "Helvetica", "Times New Roman"),
-          selected = "sans-serif"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("footerColor"),
-          label = "Footer color",
-          value = "black"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("subtitleFontSize"),
-          label = "Subtitle font size (px)",
-          value = 12,
-          min = 8,
-          max = 48,
-          step = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("subtitleFontWeight"),
-          label = "Subtitle font weight",
-          choices = c("normal", "bold", "lighter", "bolder"),
-          selected = "normal"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("subtitleFontFamily"),
-          label = "Subtitle font family",
-          choices = c("sans-serif", "serif", "monospace", "Arial", "Helvetica", "Times New Roman"),
-          selected = "sans-serif"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("subtitleColor"),
-          label = "Subtitle color",
-          value = "grey"
+    div(style = "padding-top: 10px;",
+        actionLink(
+          inputId = ns("footerStyling"),
+          label   = "Styling",
+          class   = "btn-info",
+          style   = "background-color:transparent;"
         )
     ),
     div(style = "height:20px;")
@@ -159,6 +62,11 @@ ui_clusterFooter <- function(id) {
 #' @export
 server_clusterFooter <- function(id, r = r) {
   moduleServer(id, function(input, output, session) {
+
+    observeEvent(input$footerStyling, {
+      r$clusterFooter$Styling <- input$footerStyling
+    })
+
     reactive({
       list(
         show         = input$showFooter,

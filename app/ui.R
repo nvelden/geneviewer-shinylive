@@ -11,7 +11,9 @@ box::use(
   ./views/view_scale_controls[ui_scale],
   ./views/view_scaleBar_controls[ui_scaleBar],
   ./views/view_clusterTitle_controls[ui_clusterTitle],
+  ./views/view_clusterTitleStyling_controls[ui_clusterTitleStyling],
   ./views/view_clusterFooter_controls[ui_clusterFooter],
+  ./views/view_clusterFooterStyling_controls[ui_clusterFooterStyling],
   ./views/view_clusterLabel_controls[ui_clusterLabel],
   ./views/view_legend_controls[ui_legend],
   ./views/view_legendStyling_controls[ui_legendStyling],
@@ -52,6 +54,8 @@ ui <- dashboardPage(
   dashboardBody(
     shinyjs::useShinyjs(),
     ui_legendStyling("legendStylingControls"),
+    ui_clusterFooterStyling("clusterFooterStylingControls"),
+    ui_clusterTitleStyling("clusterTitleStylingControls"),
     fluidRow(
       box(
         title       = "Gene Cluster Chart",

@@ -22,7 +22,7 @@ ui_legendStyling <- function(id) {
     div(
       id = ns("labelOptionsPlaceholder"),
       style = "position: absolute; z-index:100; width: calc(30vw); top:calc(60vh);",
-      uiOutput(ns("labelBoxUI"))
+      uiOutput(ns("stylingBoxUI"))
     )
 
 }
@@ -48,23 +48,23 @@ server_legendStyling <- function(id, r = r) {
       boxVisible(!boxVisible())
     }, ignoreInit = TRUE)
 
-    observeEvent(input$labelBox$visible, {
-      if(!input$labelBox$visible) return(boxVisible(!boxVisible()))
+    observeEvent(input$stylingBox$visible, {
+      if(!input$stylingBox$visible) return(boxVisible(!boxVisible()))
     }, ignoreInit = TRUE)
 
     # 3) Render the box (uses persisted values as defaults)
-    output$labelBoxUI <- renderUI({
+    output$stylingBoxUI <- renderUI({
       if (!boxVisible()) return(NULL)
 
       shinyjqui::jqui_draggable(
         shinydashboardPlus::box(
           width = 12,
-          title = actionLink(ns("optionsTitle"), "Label options"),
+          title = actionLink(ns("optionsTitle"), "Styling options"),
           status = "primary",
           color = "black",
           solidHeader = TRUE,
           align = "left",
-          id = ns("labelBox"),
+          id = ns("stylingBox"),
           class = "controlBox",
           collapsible = FALSE,
           closable = TRUE,
