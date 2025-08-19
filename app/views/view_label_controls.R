@@ -8,7 +8,7 @@ box::use(
   shiny[
     NS, moduleServer, observe, updateSelectInput, reactive,
     checkboxInput, numericInput, selectInput, icon, req,
-    textInput, div
+    textInput, div, actionLink, observeEvent
   ],
   shinydashboard[menuItem]
 )
@@ -38,43 +38,12 @@ ui_labels <- function(id) {
           choices = NULL
         )
     ),
-    div(style="margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("fontWeight"),
-          label   = "Font weight",
-          choices = c("normal", "bold"),
-          selected = "normal"
-        )
-    ),
-    div(style="margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("fontStyle"),
-          label   = "Font style",
-          choices = c("normal", "italic"),
-          selected = "normal"
-        )
-    ),
-    div(style="margin-bottom:-20px;",
-        textInput(
-          inputId = ns("fill"),
-          label   = "Label color",
-          value   = "black"
-        )
-    ),
-    div(style="margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("fontFamily"),
-          label   = "Font family",
-          choices = c("sans-serif", "serif", "monospace", "cursive", "fantasy"),
-          selected = "sans-serif"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("fontSize"),
-          label = "Font size (px)",
-          value = 12,
-          step  = 1
+    div(style = "padding-top: 10px;",
+        actionLink(
+          inputId = ns("labelStyling"),
+          label   = "Styling",
+          class   = "btn-info",
+          style   = "background-color:transparent;"
         )
     ),
     ## extra space at the bottom
@@ -99,15 +68,14 @@ server_labels <- function(id, r = NULL) {
       )
     })
 
+    observeEvent(input$labelStyling, {
+      r$label$Styling <- input$labelStyling
+    })
+
     reactive({
       list(
         showLabels  = input$showLabels,
-        labelGroup = input$labelGroup,
-        fontSize = input$fontSize,
-        fontStyle = input$fontStyle,
-        fontWeight = input$fontWeight,
-        fill = input$fill,
-        fontFamily = input$fontFamily
+        labelGroup = input$labelGroup
       )
     })
   })

@@ -8,6 +8,7 @@ box::use(
   ./views/view_load_controls[ui_load],
   ./views/view_gene_controls[ui_genes],
   ./views/view_label_controls[ui_labels],
+  ./views/view_labelStyling_controls[ui_labelStyling],
   ./views/view_scale_controls[ui_scale],
   ./views/view_scaleBar_controls[ui_scaleBar],
   ./views/view_clusterTitle_controls[ui_clusterTitle],
@@ -54,6 +55,7 @@ ui <- dashboardPage(
   dashboardBody(
     shinyjs::useShinyjs(),
     ui_legendStyling("legendStylingControls"),
+    ui_labelStyling("labelStylingControls"),
     ui_clusterFooterStyling("clusterFooterStylingControls"),
     ui_clusterTitleStyling("clusterTitleStylingControls"),
     fluidRow(

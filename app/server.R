@@ -4,6 +4,7 @@ box::use(
   ./views/view_load_controls[server_load],
   ./views/view_gene_controls[server_genes],
   ./views/view_label_controls[server_labels],
+  ./views/view_labelStyling_controls[server_labelStyling],
   ./views/view_scale_controls[server_scale],
   ./views/view_scaleBar_controls[server_scaleBar],
   ./views/view_clusterTitle_controls[server_clusterTitle],
@@ -41,6 +42,7 @@ function(input, output, session) {
   load_inputs <- server_load("loadControls", r = r)
   gene_inputs <- server_genes("geneControls", r = r)
   label_inputs <- server_labels("labelControls", r = r)
+  labelStyling_inputs <- server_labelStyling("labelStylingControls", r = r)
   scale_inputs <- server_scale("scaleControls", r = r)
   scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
   clusterTitle_inputs <- server_clusterTitle("clusterTitleControls", r = r)
@@ -89,11 +91,11 @@ function(input, output, session) {
           GC_labels(
             label = label_inputs()$labelGroup,
             show = label_inputs()$showLabels,
-            fontSize = label_inputs()$fontSize,
-            fontStyle = label_inputs()$fontStyle,
-            fontFamily = label_inputs()$fontFamily,
-            fontWeight = label_inputs()$fontWeight,
-            fill = label_inputs()$fill
+            fontSize = labelStyling_inputs()$fontSize,
+            fontStyle = labelStyling_inputs()$fontStyle,
+            fontFamily = labelStyling_inputs()$fontFamily,
+            fontWeight = labelStyling_inputs()$fontWeight,
+            fill = labelStyling_inputs()$fill
           ) %>%
           GC_scale(
             hidden = scale_inputs()$scaleHidden,
