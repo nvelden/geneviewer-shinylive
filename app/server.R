@@ -18,6 +18,7 @@ box::use(
   ./views/view_color_controls[server_color],
   ./views/view_sequence_controls[server_sequence],
   ./views/view_coordinates_controls[server_coordinates],
+  ./views/view_coordinatesStyling_controls[server_coordinatesStyling],
   ./views/view_gene_alignment_controls[server_align],
   ./views/view_geneLinks_controls[server_links],
   ./views/view_dimension_controls[server_dimensions],
@@ -57,6 +58,7 @@ function(input, output, session) {
   color_inputs <- server_color("colorControls", r = r)
   sequence_inputs <- server_sequence("sequenceControls", r = r)
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
+  coordinatesStyling_inputs <- server_coordinatesStyling("coordinatesStylingControls", r = r)
   alignment_inputs <- server_align("alignmentControls", r = r)
   links_inputs <- server_links("linksControls", r = r)
   tooltip_inputs <- server_tooltip("tooltipControls", r = r)
@@ -155,19 +157,13 @@ function(input, output, session) {
           ) %>%
           GC_coordinates(
             show = coordinates_inputs()$showCoordinates,
-            yPositionTop = coordinates_inputs()$yPositionTop,
-            yPositionBottom = coordinates_inputs()$yPositionBottom,
             ticksFormat = coordinates_inputs()$ticksFormat,
-            tickStyle = list(
-              stroke = coordinates_inputs()$tickStroke,
-              strokeWidth = coordinates_inputs()$tickStrokeWidth,
-              lineLength = coordinates_inputs()$tickLineLength
-            ),
-            textStyle = list(
-              fill = coordinates_inputs()$textFill,
-              fontSize = coordinates_inputs()$fontSize,
-              fontFamily = coordinates_inputs()$fontFamily
-            )
+            yPositionTop = coordinatesStyling_inputs()$yPositionTop,
+            yPositionBottom = coordinatesStyling_inputs()$yPositionBottom,
+            rotate = coordinatesStyling_inputs()$rotate,
+            overlapThreshold = coordinatesStyling_inputs()$overlapThreshold,
+            tickStyle = coordinatesStyling_inputs()$tickStyle,
+            textStyle = coordinatesStyling_inputs()$textStyle
           ) %>%
           GC_clusterLabel(
             show = clusterLabel_inputs()$show,

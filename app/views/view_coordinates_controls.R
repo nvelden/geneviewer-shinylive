@@ -6,7 +6,7 @@
 
 box::use(
   shiny[NS, moduleServer, reactive, checkboxInput, selectInput,
-        textInput, numericInput, icon, div],
+        textInput, numericInput, icon, div, observeEvent, actionLink],
   shinydashboard[menuItem]
 )
 
@@ -41,68 +41,15 @@ ui_coordinates <- function(id) {
           selected = ""
         )
     ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("yPositionTop"),
-          label   = "Y position top",
-          value   = 55,
-          min     = 0
+    div(style = "padding-top: 10px;",
+        actionLink(
+          inputId = ns("coordinatesStyling"),
+          label   = "Styling",
+          class   = "btn-info",
+          style   = "background-color:transparent;"
         )
     ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("yPositionBottom"),
-          label   = "Y position bottom",
-          value   = 45,
-          min     = 0
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("tickStrokeWidth"),
-          label   = "Tick stroke width",
-          value   = 1,
-          min     = 0
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("tickLineLength"),
-          label   = "Tick line length",
-          value   = 5,
-          min     = 0
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("tickStroke"),
-          label   = "Tick color",
-          value   = "black"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        textInput(
-          inputId = ns("textFill"),
-          label   = "Text color",
-          value   = "black"
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("fontSize"),
-          label   = "Font size",
-          value   = 12,
-          min     = 0
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        selectInput(
-          inputId = ns("fontFamily"),
-          label   = "Font family",
-          choices = c("sans-serif", "serif", "monospace", "Arial", "Helvetica", "Times New Roman"),
-          selected = "sans-serif"
-          )
-    ),
+    ## extra space at the bottom
     div(style="height:20px;")
   )
 }
@@ -113,18 +60,16 @@ ui_coordinates <- function(id) {
 #' @export
 server_coordinates <- function(id, r = r) {
   moduleServer(id, function(input, output, session) {
+
+    # Handle styling button click
+    observeEvent(input$coordinatesStyling, {
+      r$coordinates$Styling <- input$coordinatesStyling
+    })
+
     reactive({
       list(
         showCoordinates = input$showCoordinates,
-        ticksFormat = input$ticksFormat,
-        yPositionTop = input$yPositionTop,
-        yPositionBottom = input$yPositionBottom,
-        tickStroke = input$tickStroke,
-        tickStrokeWidth = input$tickStrokeWidth,
-        tickLineLength = input$tickLineLength,
-        textFill = input$textFill,
-        fontSize = input$fontSize,
-        fontFamily = input$fontFamily
+        ticksFormat = input$ticksFormat
       )
     })
   })
