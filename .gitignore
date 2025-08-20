@@ -2,10 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-.Rprofile
 .DS_store
-renv/
-renv.lock
 inst/doc
 geneviewer-shinylive.Rproj
 inst/.DS_Store
