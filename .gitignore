@@ -1,6 +1,9 @@
 .Rproj.user
 .Rhistory
 .RData
+renv.lock
+/renv
+.Rprofile
 .Ruserdata
 .DS_store
 inst/doc
