@@ -41,6 +41,11 @@ jobs:
             posit-dev/r-shinylive
             sessioninfo
           cache-version: "1"
+      - name: Install geneviewer from GitHub
+        shell: Rscript {0}
+        run: |
+          # Install geneviewer from GitHub repository
+          pak::pak("nvelden/geneviewer")
       - name: Find package dependencies
         shell: Rscript {0}
         id: packages
