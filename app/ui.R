@@ -16,6 +16,7 @@ box::use(
   ./views/view_clusterFooter_controls[ui_clusterFooter],
   ./views/view_clusterFooterStyling_controls[ui_clusterFooterStyling],
   ./views/view_clusterLabel_controls[ui_clusterLabel],
+  ./views/view_clusterLabelStyling_controls[ui_clusterLabelStyling],
   ./views/view_legend_controls[ui_legend],
   ./views/view_legendStyling_controls[ui_legendStyling],
   ./views/view_color_controls[ui_color],
@@ -58,6 +59,7 @@ ui <- dashboardPage(
     ui_labelStyling("labelStylingControls"),
     ui_clusterFooterStyling("clusterFooterStylingControls"),
     ui_clusterTitleStyling("clusterTitleStylingControls"),
+    ui_clusterLabelStyling("clusterLabelStylingControls"),
     fluidRow(
       box(
         title       = "Gene Cluster Chart",

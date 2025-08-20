@@ -12,6 +12,7 @@ box::use(
   ./views/view_clusterFooter_controls[server_clusterFooter],
   ./views/view_clusterFooterStyling_controls[server_clusterFooterStyling],
   ./views/view_clusterLabel_controls[server_clusterLabel],
+  ./views/view_clusterLabelStyling_controls[server_clusterLabelStyling],
   ./views/view_legend_controls[server_legend],
   ./views/view_legendStyling_controls[server_legendStyling],
   ./views/view_color_controls[server_color],
@@ -50,6 +51,7 @@ function(input, output, session) {
   clusterFooter_inputs <- server_clusterFooter("clusterFooterControls", r = r)
   clusterFooterStyling_inputs <- server_clusterFooterStyling("clusterFooterStylingControls", r = r)
   clusterLabel_inputs <- server_clusterLabel("clusterLabelControls", r = r)
+  clusterLabelStyling_inputs <- server_clusterLabelStyling("clusterLabelStylingControls", r = r)
   legend_inputs <- server_legend("legendControls", r = r)
   legendStyling_inputs <- server_legendStyling("legendStylingControls", r = r)
   color_inputs <- server_color("colorControls", r = r)
@@ -168,15 +170,18 @@ function(input, output, session) {
             )
           ) %>%
           GC_clusterLabel(
-            show = clusterLabel_inputs()$showCluster,
-            title = clusterLabel_inputs()$clusterLabel,
-            x = clusterLabel_inputs()$clusterLabelX,
-            y = clusterLabel_inputs()$clusterLabelY,
-            position = clusterLabel_inputs()$clusterLabelPosition,
-            fontSize = clusterLabel_inputs()$clusterLabelFontSize,
-            fontStyle = clusterLabel_inputs()$clusterLabelFontStyle,
-            fontWeight = clusterLabel_inputs()$clusterLabelFontWeight,
-            fill = clusterLabel_inputs()$clusterLabelColor
+            show = clusterLabel_inputs()$show,
+            title = clusterLabel_inputs()$text,
+            width = clusterLabelStyling_inputs()$width,
+            position = clusterLabelStyling_inputs()$position,
+            wrapLabel = clusterLabelStyling_inputs()$wrapLabel,
+            x = clusterLabelStyling_inputs()$x,
+            y = clusterLabelStyling_inputs()$y,
+            fontSize = clusterLabelStyling_inputs()$fontSize,
+            fontStyle = clusterLabelStyling_inputs()$fontStyle,
+            fontWeight = clusterLabelStyling_inputs()$fontWeight,
+            fontFamily = clusterLabelStyling_inputs()$fontFamily,
+            fill = clusterLabelStyling_inputs()$fill
           ) %>%
           GC_sequence(
             show = sequence_inputs()$showSequence,
