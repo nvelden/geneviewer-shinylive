@@ -4,7 +4,6 @@
 # Basic example of a GitHub Actions workflow that builds a Shiny app and deploys
 # it to GitHub Pages.
 name: Deploy app to gh-pages
-
 on:
   # Manually trigger the workflow
   workflow_dispatch:
@@ -13,12 +12,30 @@ on:
   #   branches: ["main"]
   # # Trigger on pull request to all branches (but do not deploy to gh-pages)
   # pull_request:
-
 jobs:
+  # First job: prepare the app files
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy app files to root
+        run: |
+          # Copy all files from app/ directory to root
+          cp -r app/* .
+          # List files to verify
+          ls -la
+
+      - name: Upload prepared files
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-app
+          path: .
+
+  # Second job: deploy using shinylive workflow
   shinylive:
+    needs: prepare
     uses: posit-dev/r-shinylive/.github/workflows/deploy-app.yaml@actions-v1
-    with:
-      app-dir: "app"
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
       pages: write # to deploy to Pages
