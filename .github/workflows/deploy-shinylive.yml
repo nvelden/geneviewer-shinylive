@@ -1,10 +1,5 @@
 name: Deploy Shinylive App to GitHub Pages
-
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -22,17 +17,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
     - name: Setup R
       uses: r-lib/actions/setup-r@v2
       with:
         r-version: '4.3.2'
         use-public-rspm: true
-
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -46,26 +39,20 @@ jobs:
           libpng-dev \
           libtiff5-dev \
           libjpeg-dev
-
     - name: Setup renv
       uses: r-lib/actions/setup-renv@v2
-
     - name: Install shinylive
       run: |
         R -e "install.packages('shinylive')"
-
     - name: Install package dependencies
       run: |
         R -e "if (!require('pak', quietly = TRUE)) install.packages('pak')"
         R -e "pak::local_install_deps()"
-
     - name: Export Shinylive app
       run: |
         R -e "shinylive::export('app', '_site')"
-
     - name: Setup Pages
       uses: actions/configure-pages@v4
-
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
