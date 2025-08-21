@@ -6,6 +6,7 @@ box::use(
   ./views/view_label_controls[server_labels],
   ./views/view_labelStyling_controls[server_labelStyling],
   ./views/view_scale_controls[server_scale],
+  ./views/view_scaleStyling_controls[server_scaleStyling],
   ./views/view_scaleBar_controls[server_scaleBar],
   ./views/view_clusterTitle_controls[server_clusterTitle],
   ./views/view_clusterTitleStyling_controls[server_clusterTitleStyling],
@@ -46,6 +47,7 @@ function(input, output, session) {
   label_inputs <- server_labels("labelControls", r = r)
   labelStyling_inputs <- server_labelStyling("labelStylingControls", r = r)
   scale_inputs <- server_scale("scaleControls", r = r)
+  scaleStyling_inputs <- server_scaleStyling("scaleStylingControls", r = r)
   scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
   clusterTitle_inputs <- server_clusterTitle("clusterTitleControls", r = r)
   clusterTitleStyling_inputs <- server_clusterTitleStyling("clusterTitleStylingControls", r = r)
@@ -102,15 +104,21 @@ function(input, output, session) {
             fill = labelStyling_inputs()$fill
           ) %>%
           GC_scale(
+            # From scale controls
             hidden = scale_inputs()$scaleHidden,
             reverse = scale_inputs()$scaleReverse,
             scale_breaks = scale_inputs()$scaleBreaks,
-            ticksCount = scale_inputs()$ticksCount,
-            start = scale_inputs()$start,
-            end = scale_inputs()$end,
-            ticksFormat = scale_inputs()$ticksFormat,
-            axis_type = scale_inputs()$axisType,
-            axis_position = scale_inputs()$axisPosition
+            padding = scaleStyling_inputs()$padding,
+            axis_type = scaleStyling_inputs()$axisType,
+            axis_position = scaleStyling_inputs()$axisPosition,
+            ticksCount = scaleStyling_inputs()$ticksCount,
+            ticksFormat = scaleStyling_inputs()$ticksFormat,
+            scale_break_threshold = scaleStyling_inputs()$scaleBreakThreshold,
+            scale_break_padding = scaleStyling_inputs()$scaleBreakPadding,
+            y = scaleStyling_inputs()$y,
+            tickStyle = scaleStyling_inputs()$tickStyle,
+            textStyle = scaleStyling_inputs()$textStyle,
+            lineStyle = scaleStyling_inputs()$lineStyle
           ) %>%
           GC_scaleBar(
             show = scaleBar_inputs()$showScaleBar,
