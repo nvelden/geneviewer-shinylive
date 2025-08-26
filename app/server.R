@@ -3,6 +3,7 @@ library(shiny)
 box::use(
   ./views/view_load_controls[server_load],
   ./views/view_gene_controls[server_genes],
+  ./views/view_geneStyling_controls[server_geneStyling],
   ./views/view_label_controls[server_labels],
   ./views/view_labelStyling_controls[server_labelStyling],
   ./views/view_scale_controls[server_scale],
@@ -44,6 +45,7 @@ function(input, output, session) {
   # inputs
   load_inputs <- server_load("loadControls", r = r)
   gene_inputs <- server_genes("geneControls", r = r)
+  geneStyling_inputs <- server_geneStyling("geneStylingControls", r = r)
   label_inputs <- server_labels("labelControls", r = r)
   labelStyling_inputs <- server_labelStyling("labelStylingControls", r = r)
   scale_inputs <- server_scale("scaleControls", r = r)
@@ -88,11 +90,16 @@ function(input, output, session) {
           width = dimensions_inputs()$width,
           height = dimensions_inputs()$height
         ) %>%
-          GC_grid(margin = dimensions_inputs()$margin) %>%
-          GC_genes(
+        GC_grid(margin = dimensions_inputs()$margin) %>%
+        GC_genes(
             group = r$input[["group"]],
             marker = gene_inputs()$marker,
-            markerSize = gene_inputs()$markerSize
+            markerSize = gene_inputs()$markerSize,
+            stroke = geneStyling_inputs()$strokeColor,
+            strokeWidth = geneStyling_inputs()$strokeWidth,
+            y = geneStyling_inputs()$y,
+            arrowheadWidth = geneStyling_inputs()$arrowheadWidth,
+            arrowheadHeight = geneStyling_inputs()$arrowheadHeight
           ) %>%
           GC_labels(
             label = label_inputs()$labelGroup,

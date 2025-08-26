@@ -7,6 +7,7 @@ library(geneviewer)
 box::use(
   ./views/view_load_controls[ui_load],
   ./views/view_gene_controls[ui_genes],
+  ./views/view_geneStyling_controls[ui_geneStyling],
   ./views/view_label_controls[ui_labels],
   ./views/view_labelStyling_controls[ui_labelStyling],
   ./views/view_scale_controls[ui_scale],
@@ -64,6 +65,7 @@ ui <- dashboardPage(
     ui_clusterLabelStyling("clusterLabelStylingControls"),
     ui_coordinatesStyling("coordinatesStylingControls"),
     ui_scaleStyling("scaleStylingControls"),
+    ui_geneStyling("geneStylingControls"),
     fluidRow(
       box(
         title       = "Gene Cluster Chart",

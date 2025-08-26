@@ -7,7 +7,8 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, observe, selectInput, div, icon, reactive, updateSelectInput, req],
+  shiny[NS, moduleServer, observe, selectInput, div, actionLink,
+        icon, reactive, updateSelectInput, observeEvent, req],
   shinydashboard[menuItem]
 )
 
@@ -38,6 +39,14 @@ ui_genes <- function(id) {
           selected = "medium"
         )
     ),
+    div(style = "padding-top: 10px;",
+        actionLink(
+          inputId = ns("geneStyling"),
+          label   = "Styling",
+          class   = "btn-info",
+          style   = "background-color:transparent;"
+        )
+    ),
     # extra space at the bottom of the menuItem
     div(style="height:20px;")
   )
@@ -50,6 +59,10 @@ ui_genes <- function(id) {
 #' @export
 server_genes <- function(id, r = NULL) {
   moduleServer(id, function(input, output, session) {
+
+    observeEvent(input$geneStyling, {
+      r$gene$Styling <- input$geneStyling
+    })
 
     reactive(list(
       marker      = input$marker,
