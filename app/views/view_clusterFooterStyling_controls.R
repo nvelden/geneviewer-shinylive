@@ -227,7 +227,10 @@ server_clusterFooterStyling <- function(id, r = r) {
           )
         ),
         options = list(
-          cancel = ".form-control, .selectize-control, input, textarea, button, .btn, .shiny-input-container"
+          cancel = ".form-control, .selectize-control, input, textarea, button, .btn, .shiny-input-container",
+          stack = ".controlBox",
+          scroll = FALSE,
+          containment = "window"
         ),
       )
     })
