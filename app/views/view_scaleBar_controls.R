@@ -3,14 +3,11 @@
 #' The \code{view_scaleBar_controls} module provides the UI and server components
 #' for controlling the GC scale bar in the Gene Cluster Dashboard.
 '.__module__.'
-
-
 box::use(
-  shiny[NS, moduleServer, reactive, textInput, numericInput, selectInput, checkboxInput, icon, div],
+  shiny[NS, moduleServer, reactive, textInput, numericInput, selectInput,
+        observeEvent, actionLink, checkboxInput, icon, div],
   shinydashboard[menuItem]
 )
-
-
 #' Shiny UI for GC scale bar controls
 #'
 #' @param id Namespace id for this module
@@ -30,22 +27,6 @@ ui_scaleBar <- function(id) {
         )
     ),
     div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("scaleBarX"),
-          label = "X-position",
-          value = 0,
-          step  = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("scaleBarY"),
-          label = "Y-position",
-          value = 50,
-          step  = 1
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
         textInput(
           inputId = ns("scaleBarTitle"),
           label = "Scale bar title",
@@ -61,10 +42,17 @@ ui_scaleBar <- function(id) {
           step = 100
         )
     ),
+    div(style = "padding-top: 10px;",
+        actionLink(
+          inputId = ns("scaleBarStyling"),
+          label   = "Styling",
+          class   = "btn-info",
+          style   = "background-color:transparent;"
+        )
+    ),
     div(style = "height:20px;")
   )
 }
-
 #' Shiny server for GC scale controls
 #'
 #' @param id Namespace id for this module
@@ -72,13 +60,14 @@ ui_scaleBar <- function(id) {
 #' @export
 server_scaleBar <- function(id, r = r) {
   moduleServer(id, function(input, output, session) {
+    observeEvent(input$scaleBarStyling, {
+      r$scaleBar$Styling <- input$scaleBarStyling
+    })
     reactive({
       list(
         showScaleBar = input$showScaleBar,
         scaleBarTitle = input$scaleBarTitle,
-        scaleBarUnit = input$scaleBarUnit,
-        scaleBarX = input$scaleBarX,
-        scaleBarY = input$scaleBarY
+        scaleBarUnit = input$scaleBarUnit
       )
     })
   })

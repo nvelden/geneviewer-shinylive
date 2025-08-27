@@ -9,6 +9,7 @@ box::use(
   ./views/view_scale_controls[server_scale],
   ./views/view_scaleStyling_controls[server_scaleStyling],
   ./views/view_scaleBar_controls[server_scaleBar],
+  ./views/view_scaleBarStyling_controls[server_scaleBarStyling],
   ./views/view_clusterTitle_controls[server_clusterTitle],
   ./views/view_clusterTitleStyling_controls[server_clusterTitleStyling],
   ./views/view_clusterFooter_controls[server_clusterFooter],
@@ -52,6 +53,7 @@ function(input, output, session) {
   scale_inputs <- server_scale("scaleControls", r = r)
   scaleStyling_inputs <- server_scaleStyling("scaleStylingControls", r = r)
   scaleBar_inputs <- server_scaleBar("scaleBarControls", r = r)
+  scaleBarStyling_inputs <- server_scaleBarStyling("scaleBarStylingControls", r = r)
   clusterTitle_inputs <- server_clusterTitle("clusterTitleControls", r = r)
   clusterTitleStyling_inputs <- server_clusterTitleStyling("clusterTitleStylingControls", r = r)
   clusterFooter_inputs <- server_clusterFooter("clusterFooterControls", r = r)
@@ -133,8 +135,12 @@ function(input, output, session) {
             show = scaleBar_inputs()$showScaleBar,
             title = scaleBar_inputs()$scaleBarTitle,
             scaleBarUnit = scaleBar_inputs()$scaleBarUnit,
-            x = scaleBar_inputs()$scaleBarX,
-            y = scaleBar_inputs()$scaleBarY
+            x = scaleBarStyling_inputs()$x,
+            y = scaleBarStyling_inputs()$y,
+            labelStyle = scaleBarStyling_inputs()$labelStyle,
+            scaleBarLineStyle = scaleBarStyling_inputs()$scaleBarLineStyle,
+            scaleBarTickStyle = scaleBarStyling_inputs()$scaleBarTickStyle,
+            textPadding = scaleBarStyling_inputs()$textPadding
           ) %>%
           GC_clusterTitle(
             title = clusterTitle_inputs()$title,
