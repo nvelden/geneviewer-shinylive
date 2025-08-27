@@ -7,8 +7,8 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, observe, selectInput, div, actionLink,
-        icon, reactive, updateSelectInput, observeEvent, req],
+  shiny[NS, moduleServer, observe, selectInput, div, icon, reactive, actionLink,
+        observeEvent, updateSelectInput, req],
   shinydashboard[menuItem]
 )
 

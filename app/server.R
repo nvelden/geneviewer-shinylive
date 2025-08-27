@@ -23,6 +23,7 @@ box::use(
   ./views/view_coordinatesStyling_controls[server_coordinatesStyling],
   ./views/view_gene_alignment_controls[server_align],
   ./views/view_geneLinks_controls[server_links],
+  ./views/view_geneLinksStyling_controls[server_geneLinksStyling],
   ./views/view_dimension_controls[server_dimensions],
   ./views/view_tooltip_controls[server_tooltip],
   ./logic/utils[make_named_color_list, order_cluster_data],
@@ -65,6 +66,7 @@ function(input, output, session) {
   coordinatesStyling_inputs <- server_coordinatesStyling("coordinatesStylingControls", r = r)
   alignment_inputs <- server_align("alignmentControls", r = r)
   links_inputs <- server_links("linksControls", r = r)
+  geneLinksStyling_inputs <- server_geneLinksStyling("geneLinksStylingControls", r = r)
   tooltip_inputs <- server_tooltip("tooltipControls", r = r)
   dimensions_inputs <- server_dimensions("dimensionsControls", r = r)
 
@@ -320,10 +322,14 @@ function(input, output, session) {
           GC_chart_object %>%
           GC_links(
             group = links_inputs()$group,
-            curve = links_inputs()$curve,
+            curve = geneLinksStyling_inputs()$curve,
             value1 = links_inputs()$value1,
             value2 = links_inputs()$value2,
-            use_group_colors = links_inputs()$colorByGroup
+            use_group_colors = geneLinksStyling_inputs()$use_group_colors,
+            normal_color = geneLinksStyling_inputs()$normal_color,
+            inverted_color = geneLinksStyling_inputs()$inverted_color,
+            linkWidth = geneLinksStyling_inputs()$linkWidth,
+            linkStyle = geneLinksStyling_inputs()$linkStyle
           )
       },
       error = function(e) {

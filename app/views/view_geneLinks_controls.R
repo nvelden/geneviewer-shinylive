@@ -4,12 +4,11 @@
 #' for controlling the GC_links function parameters in the Gene Cluster Dashboard.
 '.__module__.'
 box::use(
-  shiny[NS, moduleServer, reactive, checkboxInput, req, numericInput,
-        selectInput, icon, div, textInput, updateSelectInput, observe],
+  shiny[NS, moduleServer, reactive, checkboxInput, req, numericInput, actionLink,
+        selectInput, icon, div, textInput, updateSelectInput, observe, observeEvent],
   shinydashboard[menuItem],
   ../logic/utils[parse_delimited_input]
 )
-
 #' Shiny UI for GC links controls
 #'
 #' @param id Namespace id for this module
@@ -26,20 +25,6 @@ ui_links <- function(id) {
           inputId = ns("show"),
           label   = "Show GC links",
           value   = FALSE
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        checkboxInput(
-          inputId = ns("colorByGroup"),
-          label   = "Color by Group",
-          value   = FALSE
-        )
-    ),
-    div(style = "margin-bottom:-20px;",
-        checkboxInput(
-          inputId = ns("curve"),
-          label   = "Curved Links",
-          value   = TRUE
         )
     ),
     div(style="margin-bottom:-20px;",
@@ -63,20 +48,17 @@ ui_links <- function(id) {
           placeholder = "genID3, genID4, ..."
         )
     ),
-    div(style = "margin-bottom:-20px;",
-        numericInput(
-          inputId = ns("linkOpacity"),
-          label   = "Link opacity",
-          value   = 1,
-          min     = 0,
-          max     = 1,
-          step    = 0.1
+    div(style = "padding-top: 10px;",
+        actionLink(
+          inputId = ns("linksStyling"),
+          label   = "Styling",
+          class   = "btn-info",
+          style   = "background-color:transparent;"
         )
     ),
     div(style = "height:20px;")
   )
 }
-
 #' Shiny server for GC links controls
 #'
 #' @param id Namespace id for this module
@@ -84,7 +66,6 @@ ui_links <- function(id) {
 #' @export
 server_links <- function(id, r) {
   moduleServer(id, function(input, output, session) {
-
     observe({
       req(r$cluster_data)
       updateSelectInput(
@@ -94,16 +75,14 @@ server_links <- function(id, r) {
         selected = names(r$cluster_data)[1]
       )
     })
-
+    observeEvent(input$linksStyling, {
+      r$links$Styling <- input$linksStyling
+    })
     reactive(list(
       show = input$show,
       group = input$group,
-      curve = input$curve,
       value1 = parse_delimited_input(input$value1),
-      value2 = parse_delimited_input(input$value2),
-      colorByGroup = input$colorByGroup,
-      opacity = input$linkOpacity
+      value2 = parse_delimited_input(input$value2)
     ))
-
   })
 }
