@@ -94,8 +94,8 @@ def login_with_selenium():
             time.sleep(wait_seconds)
 
         xpath_register = (
-            f"//div[contains(@class,'fn-event-item')]"                                   
-            f"[.//span[contains(normalize-space(.),'{NEXT_WEEK_DATE}')]]"                 
+            f"//div[contains(@class,'fj_post')]"                                   
+            f"[.//span[@class='title-part']//a[contains(normalize-space(.),'{NEXT_WEEK_DATE}')]]"                 
             "//a[normalize-space(text())='Register']"                                    
         )
 
