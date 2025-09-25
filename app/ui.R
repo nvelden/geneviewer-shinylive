@@ -39,6 +39,10 @@ ui <- dashboardPage(
     title = "Gene Cluster Dashboard"
   ),
   dashboardSidebar(
+    tags$style(HTML("
+  .compact-inputs .col-sm-6 {
+    padding: 0px !important;
+  ")),
     sidebarMenu(
       ui_load("loadControls"),
       ui_genes("geneControls"),

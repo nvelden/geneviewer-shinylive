@@ -5,7 +5,7 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, fileInput, reactive, req, div, icon, outputOptions,
+  shiny[NS, moduleServer, fileInput, reactive, req, div, br, icon, outputOptions,
         observeEvent, showNotification, conditionalPanel, selectInput, selectizeInput, updateSelectizeInput],
   shinydashboard[menuItem],
   ../logic/logic_load_controls[set_inputs_from_columns, synonyms, load_gene_data],
@@ -32,6 +32,10 @@ ui_load <- function(id) {
           accept  = NULL  # Accept any file type
         )
     ),
+    # Add note about supported file types
+    div(style = "padding: 0px 15px 10px 15px; font-size: 11px; color: #666;",
+        "Supports: CSV and GBK (.gbk, .gb) files"
+    ),
     shiny::tags$a(
       href = "gene_cluster_example.csv",
       target = "_blank",
@@ -42,7 +46,6 @@ ui_load <- function(id) {
       condition = "output.fileUploaded",
       ns = ns,
       div(style = "margin-top: 0px;",
-
           div(style = "margin-bottom: -20px;",
               selectInput(
                 inputId = ns("select_start"),
