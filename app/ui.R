@@ -19,7 +19,7 @@ box::use(
   ./views/view_clusterFooter_controls[ui_clusterFooter],
   ./views/view_clusterFooterStyling_controls[ui_clusterFooterStyling],
   ./views/view_clusterLabel_controls[ui_clusterLabel],
-  ./views/view_clusterLabelStyling_controls[ui_clusterLabelStyling],
+  ./views/view_clusterlabelStyling_controls[ui_clusterlabelStyling],
   ./views/view_legend_controls[ui_legend],
   ./views/view_legendStyling_controls[ui_legendStyling],
   ./views/view_color_controls[ui_color],
