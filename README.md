@@ -40,7 +40,3 @@ The Gene Cluster Dashboard is a comprehensive web application built with R Shiny
 - **Layout**: Precise positioning and spacing controls
 - **Dimensions**: Customizable plot dimensions and margins
 - **Styling panels**: Dedicated interfaces for fine-tuning appearance
-
-## Installation
-
-
