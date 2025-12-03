@@ -37,4 +37,4 @@ keys.json
 TODO.txt
 notes.txt
 temp/
-tmp/
+tmp/__pycache__/
