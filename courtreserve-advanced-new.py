@@ -30,7 +30,7 @@ MAX_RETRIES      = 10
 RETRY_DELAY      = 1     # seconds between retries
 dt = date.today() + timedelta(weeks=1)
 NEXT_WEEK_DATE = f"{dt.strftime('%b')} {dt.day}"
-REGISTER_HOUR_UTC    = 10
+REGISTER_HOUR_UTC    = 11
 REGISTER_MINUTE_UTC  = 0
 BROWSER_VISIBLE = False
 # ───────────────────────────────────────────────────────────────────
@@ -132,14 +132,6 @@ def login_with_selenium():
                 # ^ Commented out filter click as we want DEFAULT view now
         else:
             logging.error("Failed to find Register after retries, exiting")
-            # Debug: Log what events ARE visible
-            try:
-                titles = driver.find_elements(By.CSS_SELECTOR, ".title-part a")
-                logging.info(f"Visible events on page ({len(titles)}):")
-                for t in titles:
-                    logging.info(f"  - {t.text.strip()}")
-            except:
-                pass
             return
 
         # 6) Click a second "Register" if it appears

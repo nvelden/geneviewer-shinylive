@@ -29,7 +29,7 @@ MAX_RETRIES      = 10
 RETRY_DELAY      = 1     # seconds between retries
 dt = date.today() + timedelta(weeks=1)
 NEXT_WEEK_DATE = f"{dt.strftime('%b')} {dt.day}"
-REGISTER_HOUR_UTC    = 10
+REGISTER_HOUR_UTC    = 11
 REGISTER_MINUTE_UTC  = 0
 BROWSER_VISIBLE = False
 # ───────────────────────────────────────────────────────────────────
