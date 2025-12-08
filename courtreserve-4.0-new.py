@@ -1,7 +1,7 @@
 import logging
 import time
 import os
-from selenium import webdriver
+import undetected_chromedriver as uc
 from datetime import date, timedelta, datetime, timezone
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -39,19 +39,15 @@ logging.basicConfig(
 )
 
 def login_and_scrape():
-    options = webdriver.ChromeOptions()
+    # Use undetected-chromedriver to bypass bot detection
+    options = uc.ChromeOptions()
+    
     if not BROWSER_VISIBLE:
         options.add_argument("--headless=new")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-
-    driver = webdriver.Chrome(options=options)
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
+    
+    # Create driver with undetected-chromedriver
+    driver = uc.Chrome(options=options, version_main=142)
+    
     driver.implicitly_wait(2)
     wait = WebDriverWait(driver, WAIT_TIMEOUT)
 
@@ -59,12 +55,40 @@ def login_and_scrape():
         # 1) Log in
         driver.get(LOGIN_URL)
         logging.info("Opening login page")
+        
+        # Add random delay to appear more human
+        time.sleep(1 + (time.time() % 1))  # 1-2 seconds
+        
+        # Wait for page to be fully loaded
+        wait.until(lambda d: d.execute_script('return document.readyState') == 'complete')
+        
         user_in = wait.until(EC.visibility_of_element_located((By.NAME, "email")))
         pass_in = wait.until(EC.visibility_of_element_located((By.NAME, "password")))
+        
+        # Human-like typing with random delays
         user_in.clear()
-        user_in.send_keys(USERNAME)
+        for char in USERNAME:
+            user_in.send_keys(char)
+            time.sleep(0.05 + (time.time() % 0.1))  # 50-150ms per character
+        
+        time.sleep(0.3 + (time.time() % 0.3))  # Pause before password
+        
         pass_in.clear()
-        pass_in.send_keys(PASSWORD, Keys.RETURN)
+        for char in PASSWORD:
+            pass_in.send_keys(char)
+            time.sleep(0.05 + (time.time() % 0.1))
+        
+        time.sleep(0.5 + (time.time() % 0.5))  # Pause before submit
+        
+        # Click the submit button instead of using Keys.RETURN
+        try:
+            submit_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']")))
+            submit_btn.click()
+            logging.info("Clicked submit button")
+        except:
+            # Fallback to pressing Enter if button not found
+            logging.warning("Submit button not found, using Keys.RETURN")
+            pass_in.send_keys(Keys.RETURN)
 
         # 2) Wait for dashboard
         wait.until(EC.url_contains(SUCCESS_PATH))
