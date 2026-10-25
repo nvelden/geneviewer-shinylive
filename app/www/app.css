@@ -2,8 +2,9 @@
    Layout: the chart preview on a canvas in the middle, the settings of the
    selected section in an inspector panel on the right. */
 
-:root {
-  --gv-inspector-width: 23rem;
+/* Width of the settings sidebar on the right */
+.sb-page {
+  --sb-sidebar-right-width: 23rem;
 }
 
 /* ---- Header --------------------------------------------------------- */
@@ -76,13 +77,15 @@
 .gv-workspace {
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--gv-inspector-width);
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---- Canvas --------------------------------------------------------- */
 
 .gv-canvas-area {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -130,14 +133,9 @@
 
 /* ---- Inspector ------------------------------------------------------ */
 
+/* The settings sidebar (block_sidebar(side = "right")) */
 .gv-inspector {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   background: var(--background);
-  border-left: 1px solid var(--border);
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -386,25 +384,22 @@
 
 /* ---- Small screens: preview above the settings ----------------------- */
 
-@media (max-width: 64rem) {
+@media (max-width: 767px) {
   .sb-page-main:has(.gv-workspace) {
     height: auto;
-  }
-  .gv-workspace {
-    grid-template-columns: minmax(0, 1fr);
   }
   .gv-canvas-area {
     overflow: visible;
   }
-  .gv-inspector {
-    border-left: 0;
-    border-top: 1px solid var(--border);
-    overflow: visible;
-  }
 }
 
-/* Phones: a one-line header, links as icons */
-@media (max-width: 40rem) {
+/* A one-line header with icon links when the main column is narrow: on
+   phones, or with both sidebars open on a smaller screen */
+.sb-page-main {
+  container: gv-main / inline-size;
+}
+
+@container gv-main (max-width: 60rem) {
   .gv-header {
     flex-wrap: nowrap;
   }
@@ -415,6 +410,9 @@
   .gv-header-link {
     padding: 0 0.5rem;
   }
+}
+
+@container gv-main (max-width: 40rem) {
   .gv-canvas-area {
     padding: 1rem;
   }

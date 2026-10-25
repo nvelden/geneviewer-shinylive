@@ -89,6 +89,16 @@ ui <- block_page(
     collapsible = TRUE,
     do.call(block_nav, c(list(id = "section"), nav_items))
   ),
+  # The settings of the selected section; collapse it to give the preview
+  # the full width
+  sidebar_right = block_sidebar(
+    title = "Settings",
+    collapsible = TRUE,
+    side = "right",
+    id = "settings",
+    class = "gv-inspector",
+    inspector_panels
+  ),
   header = block_header(
     tags$div(
       class = "gv-header",
@@ -113,7 +123,7 @@ ui <- block_page(
   block_toaster("toasts"),
   tags$div(
     class = "gv-workspace",
-    tags$main(
+    tags$div(
       class = "gv-canvas-area",
       tags$div(
         class = "gv-canvas-toolbar",
@@ -125,7 +135,6 @@ ui <- block_page(
         uiOutput("dataBadges", inline = TRUE)
       ),
       tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto"))
-    ),
-    tags$aside(class = "gv-inspector", `aria-label` = "Chart settings", inspector_panels)
+    )
   )
 )
