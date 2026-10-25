@@ -54,7 +54,7 @@ jobs:
         id: packages
         run: |
           # Find package dependencies using {renv} and install with {pak}
-          # (not geneviewer: the GitHub version installed above is kept)
+          # (not geneviewer: the R-universe version installed above is kept)
           pak::pak(
             setdiff(unique(renv::dependencies("app")$Package), "geneviewer")
           )
