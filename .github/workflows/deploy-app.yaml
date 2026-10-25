@@ -41,11 +41,14 @@ jobs:
             posit-dev/r-shinylive
             sessioninfo
           cache-version: "1"
-      - name: Install geneviewer from GitHub
+      - name: Install geneviewer from R-universe
         shell: Rscript {0}
         run: |
-          # Install geneviewer from GitHub repository
-          pak::pak("nvelden/geneviewer")
+          # Install the development version of geneviewer from R-universe, which
+          # also has its WebAssembly build for shinylive::export()
+          install.packages("geneviewer",
+            repos = c("https://nvelden.r-universe.dev", getOption("repos")))
+          packageDescription("geneviewer")[c("Version", "Repository", "RemoteSha")]
       - name: Find package dependencies
         shell: Rscript {0}
         id: packages
