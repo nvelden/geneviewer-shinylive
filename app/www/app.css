@@ -3,7 +3,6 @@
    selected section in an inspector panel on the right. */
 
 :root {
-  --gv-header-height: 4rem;
   --gv-inspector-width: 23rem;
 }
 
@@ -59,18 +58,26 @@
 
 /* ---- Workspace ------------------------------------------------------ */
 
-/* The workspace fills the page body edge to edge */
-.sb-body:has(> .gv-workspace),
+/* The page column is exactly one window tall: the header takes what it
+   needs and the workspace fills the rest, so the page itself never
+   scrolls; the canvas and the inspector scroll on their own. */
+.sb-page-main:has(.gv-workspace) {
+  height: 100dvh;
+  min-height: 0;
+}
+
 .sb-body:has(.gv-workspace) {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 0;
   gap: 0;
 }
 
 .gv-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--gv-inspector-width);
-  height: calc(100dvh - var(--gv-header-height));
-  min-height: 32rem;
 }
 
 /* ---- Canvas --------------------------------------------------------- */
@@ -380,9 +387,11 @@
 /* ---- Small screens: preview above the settings ----------------------- */
 
 @media (max-width: 64rem) {
+  .sb-page-main:has(.gv-workspace) {
+    height: auto;
+  }
   .gv-workspace {
     grid-template-columns: minmax(0, 1fr);
-    height: auto;
   }
   .gv-canvas-area {
     overflow: visible;
