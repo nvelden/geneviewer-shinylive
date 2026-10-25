@@ -51,8 +51,9 @@ jobs:
         id: packages
         run: |
           # Find package dependencies using {renv} and install with {pak}
+          # (not geneviewer: the GitHub version installed above is kept)
           pak::pak(
-            unique(renv::dependencies("app")$Package)
+            setdiff(unique(renv::dependencies("app")$Package), "geneviewer")
           )
       - name: Build site
         shell: Rscript {0}
