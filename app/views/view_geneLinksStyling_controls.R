@@ -40,6 +40,9 @@ server_geneLinksStyling <- function(id, r = r) {
       # Link appearance
       normalColor = "#969696",
       invertedColor = "#d62728",
+      lowColor = "white",
+      vmin = 0,
+      vmax = 100,
       curve = TRUE,
       linkWidth = 1,
       useGroupColors = FALSE,
@@ -120,6 +123,35 @@ server_geneLinksStyling <- function(id, r = r) {
                   ),
                   fluidRow(
                     column(6,
+                           textInput(
+                             inputId = ns("lowColor"),
+                             label = "Low Identity Color",
+                             value = isolate(vals$lowColor)
+                           )
+                    ),
+                    column(3,
+                           numericInput(
+                             inputId = ns("vmin"),
+                             label = "Min %",
+                             value = isolate(vals$vmin),
+                             min = 0,
+                             max = 100,
+                             step = 1
+                           )
+                    ),
+                    column(3,
+                           numericInput(
+                             inputId = ns("vmax"),
+                             label = "Max %",
+                             value = isolate(vals$vmax),
+                             min = 0,
+                             max = 100,
+                             step = 1
+                           )
+                    )
+                  ),
+                  fluidRow(
+                    column(6,
                            numericInput(
                              inputId = ns("linkWidth"),
                              label = "Link Width",
@@ -182,6 +214,9 @@ server_geneLinksStyling <- function(id, r = r) {
     # 4) Observers to update reactive values when inputs change
     observeEvent(input$normalColor, { vals$normalColor <- input$normalColor })
     observeEvent(input$invertedColor, { vals$invertedColor <- input$invertedColor })
+    observeEvent(input$lowColor, { vals$lowColor <- input$lowColor })
+    observeEvent(input$vmin, { vals$vmin <- input$vmin })
+    observeEvent(input$vmax, { vals$vmax <- input$vmax })
     observeEvent(input$curve, { vals$curve <- input$curve })
     observeEvent(input$linkWidth, { vals$linkWidth <- input$linkWidth })
     observeEvent(input$useGroupColors, { vals$useGroupColors <- input$useGroupColors })
@@ -196,6 +231,9 @@ server_geneLinksStyling <- function(id, r = r) {
         # Link appearance
         normal_color = vals$normalColor,
         inverted_color = vals$invertedColor,
+        low_color = vals$lowColor,
+        vmin = if (is.na(vals$vmin)) NULL else vals$vmin,
+        vmax = if (is.na(vals$vmax)) NULL else vals$vmax,
         curve = vals$curve,
         linkWidth = vals$linkWidth,
         use_group_colors = vals$useGroupColors,

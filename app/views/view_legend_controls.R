@@ -37,6 +37,14 @@ ui_legend <- function(id) {
         )
     ),
     div(style = "margin-bottom:-20px;",
+        selectInput(
+          inputId = ns("legendAlign"),
+          label   = "Align",
+          choices = c("left", "center", "right"),
+          selected = "left"
+        )
+    ),
+    div(style = "margin-bottom:-20px;",
         numericInput(
           inputId = ns("legendX"),
           label = "X-position",
@@ -78,6 +86,7 @@ server_legend <- function(id, r = NULL) {
       list(
         showLegend = input$showLegend,
         legendPosition = input$legendPosition,
+        legendAlign = input$legendAlign,
         legendX = input$legendX,
         legendY = input$legendY,
         legendFontSize = input$legendFontSize,

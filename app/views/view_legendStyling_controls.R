@@ -39,7 +39,8 @@ server_legendStyling <- function(id, r = r) {
     vals <- reactiveValues(
       size   = 12,
       family = "sans-serif",
-      fill   = "black"
+      fill   = "black",
+      cornerRadius = NULL
     )
 
     # 2) Track visibility (start hidden)
@@ -76,7 +77,10 @@ server_legendStyling <- function(id, r = r) {
                           choices = c("sans-serif","serif","monospace","cursive","fantasy"),
                           selected = isolate(vals$family))),
           div(style = "margin-bottom:-15px;",
-              textInput(ns("legendFill"), "Text color", value = isolate(vals$fill)))
+              textInput(ns("legendFill"), "Text color", value = isolate(vals$fill))),
+          div(style = "margin-bottom:-15px;",
+              numericInput(ns("legendCornerRadius"), "Marker corner radius",
+                           value = isolate(vals$cornerRadius), min = 0, step = 1))
         ),
         options = list(
           cancel = ".form-control, .selectize-control, input, textarea, button, .btn, .shiny-input-container",
@@ -98,12 +102,17 @@ server_legendStyling <- function(id, r = r) {
       if (!is.null(input$legendFill)) vals$fill <- input$legendFill
     })
 
+    observeEvent(input$legendCornerRadius, ignoreInit = TRUE, {
+      vals$cornerRadius <- if (is.na(input$legendCornerRadius)) NULL else input$legendCornerRadius
+    })
+
     # 5) Expose current settings
     reactive({
       list(
         legendFontSize   = input$legendFontSize %||% vals$size,
         legendFontFamily = input$legendFontFamily %||% vals$family,
-        legendFill       = input$legendFill %||% vals$fill
+        legendFill       = input$legendFill %||% vals$fill,
+        cornerRadius     = vals$cornerRadius
       )
     })
   })

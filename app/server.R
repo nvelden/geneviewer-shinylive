@@ -18,7 +18,8 @@ box::use(
   ./views/view_clusterLabelStyling_controls[server_clusterLabelStyling],
   ./views/view_legend_controls[server_legend],
   ./views/view_legendStyling_controls[server_legendStyling],
-  ./views/view_color_controls[server_color],
+  ./views/view_color_controls[server_color, server_pattern],
+  ./views/view_theme_controls[server_theme],
   ./views/view_sequence_controls[server_sequence],
   ./views/view_coordinates_controls[server_coordinates],
   ./views/view_coordinatesStyling_controls[server_coordinatesStyling],
@@ -27,7 +28,7 @@ box::use(
   ./views/view_geneLinksStyling_controls[server_geneLinksStyling],
   ./views/view_dimension_controls[server_dimensions],
   ./views/view_tooltip_controls[server_tooltip],
-  ./logic/utils[make_named_color_list, order_cluster_data],
+  ./logic/utils[make_named_color_list, order_cluster_data, drop_unchanged, call_gc],
 )
 
 # Define server logic required to draw a histogram
@@ -63,6 +64,8 @@ function(input, output, session) {
   legend_inputs <- server_legend("legendControls", r = r)
   legendStyling_inputs <- server_legendStyling("legendStylingControls", r = r)
   color_inputs <- server_color("colorControls", r = r)
+  pattern_inputs <- server_pattern("colorControls", r = r)
+  theme_inputs <- server_theme("themeControls", r = r)
   sequence_inputs <- server_sequence("sequenceControls", r = r)
   coordinates_inputs <- server_coordinates("coordinatesControls", r = r)
   coordinatesStyling_inputs <- server_coordinatesStyling("coordinatesStylingControls", r = r)
@@ -71,6 +74,17 @@ function(input, output, session) {
   geneLinksStyling_inputs <- server_geneLinksStyling("geneLinksStylingControls", r = r)
   tooltip_inputs <- server_tooltip("tooltipControls", r = r)
   dimensions_inputs <- server_dimensions("dimensionsControls", r = r)
+
+  # The first value of each set of styling options is its app default. With a
+  # theme, options left at their default are dropped, so the theme sets them.
+  style_defaults <- new.env()
+  themed <- function(name, x) {
+    if (!exists(name, envir = style_defaults, inherits = FALSE)) {
+      assign(name, x, envir = style_defaults)
+    }
+    if (!isTRUE(theme_inputs()$active)) return(x)
+    drop_unchanged(x, get(name, envir = style_defaults)) %||% list()
+  }
 
   output$gcChart <- renderGC_chart({
 
@@ -81,10 +95,26 @@ function(input, output, session) {
       order_vec = r$input[["select_order"]]
     )
 
+    theme <- theme_inputs()
+    genes <- themed("genes", gene_inputs())
+    geneStyling <- themed("geneStyling", geneStyling_inputs())
+    labelStyling <- themed("labelStyling", labelStyling_inputs())
+    scaleStyling <- themed("scaleStyling", scaleStyling_inputs())
+    scaleBarStyling <- themed("scaleBarStyling", scaleBarStyling_inputs())
+    clusterTitleStyling <- themed("clusterTitleStyling", clusterTitleStyling_inputs())
+    clusterFooterStyling <- themed("clusterFooterStyling", clusterFooterStyling_inputs())
+    clusterLabelStyling <- themed("clusterLabelStyling", clusterLabelStyling_inputs())
+    legend <- themed("legend", legend_inputs())
+    legendStyling <- themed("legendStyling", legendStyling_inputs())
+    sequence <- themed("sequence", sequence_inputs())
+    coordinatesStyling <- themed("coordinatesStyling", coordinatesStyling_inputs())
+    colors <- themed("colors", color_inputs())
+    patterns <- pattern_inputs()
+
     GC_chart_object <- tryCatch({
 
       withCallingHandlers({
-        GC_chart(
+        chart <- GC_chart(
           cluster_data_ordered,
           start = r$input[["start"]],
           end = r$input[["end"]],
@@ -94,137 +124,166 @@ function(input, output, session) {
           width = dimensions_inputs()$width,
           height = dimensions_inputs()$height
         ) %>%
-        GC_grid(margin = dimensions_inputs()$margin) %>%
-        GC_genes(
+          GC_grid(margin = dimensions_inputs()$margin)
+
+        if (theme$active) {
+          chart <- do.call(GC_theme, c(list(chart), theme$settings))
+        }
+
+        chart <- chart %>%
+          call_gc(GC_genes, .,
             group = r$input[["group"]],
-            marker = gene_inputs()$marker,
-            markerSize = gene_inputs()$markerSize,
-            stroke = geneStyling_inputs()$strokeColor,
-            strokeWidth = geneStyling_inputs()$strokeWidth,
-            y = geneStyling_inputs()$y,
-            arrowheadWidth = geneStyling_inputs()$arrowheadWidth,
-            arrowheadHeight = geneStyling_inputs()$arrowheadHeight
+            marker = genes$marker,
+            markerSize = genes$markerSize,
+            stroke = geneStyling$strokeColor,
+            strokeWidth = geneStyling$strokeWidth,
+            y = geneStyling$y,
+            arrowheadWidth = geneStyling$arrowheadWidth,
+            arrowheadHeight = geneStyling$arrowheadHeight,
+            corner_radius = geneStyling$cornerRadius
           ) %>%
-          GC_labels(
+          call_gc(GC_labels, .,
             label = label_inputs()$labelGroup,
             show = label_inputs()$showLabels,
-            fontSize = labelStyling_inputs()$fontSize,
-            fontStyle = labelStyling_inputs()$fontStyle,
-            fontFamily = labelStyling_inputs()$fontFamily,
-            fontWeight = labelStyling_inputs()$fontWeight,
-            fill = labelStyling_inputs()$fill
+            fontSize = labelStyling$fontSize,
+            fontStyle = labelStyling$fontStyle,
+            fontFamily = labelStyling$fontFamily,
+            fontWeight = labelStyling$fontWeight,
+            fill = labelStyling$fill
           ) %>%
-          GC_scale(
+          call_gc(GC_scale, .,
             # From scale controls
             hidden = scale_inputs()$scaleHidden,
             reverse = scale_inputs()$scaleReverse,
             scale_breaks = scale_inputs()$scaleBreaks,
-            padding = scaleStyling_inputs()$padding,
-            axis_type = scaleStyling_inputs()$axisType,
-            axis_position = scaleStyling_inputs()$axisPosition,
-            ticksCount = scaleStyling_inputs()$ticksCount,
-            ticksFormat = scaleStyling_inputs()$ticksFormat,
-            scale_break_threshold = scaleStyling_inputs()$scaleBreakThreshold,
-            scale_break_padding = scaleStyling_inputs()$scaleBreakPadding,
-            y = scaleStyling_inputs()$y,
-            tickStyle = scaleStyling_inputs()$tickStyle,
-            textStyle = scaleStyling_inputs()$textStyle,
-            lineStyle = scaleStyling_inputs()$lineStyle
+            padding = scaleStyling$padding,
+            axis_type = scaleStyling$axisType,
+            axis_position = scaleStyling$axisPosition,
+            ticksCount = scaleStyling$ticksCount,
+            ticksFormat = scaleStyling$ticksFormat,
+            scale_break_threshold = scaleStyling$scaleBreakThreshold,
+            scale_break_padding = scaleStyling$scaleBreakPadding,
+            y = scaleStyling$y,
+            tickStyle = scaleStyling$tickStyle,
+            textStyle = scaleStyling$textStyle,
+            lineStyle = scaleStyling$lineStyle
           ) %>%
-          GC_scaleBar(
+          call_gc(GC_scaleBar, .,
             show = scaleBar_inputs()$showScaleBar,
             title = scaleBar_inputs()$scaleBarTitle,
             scaleBarUnit = scaleBar_inputs()$scaleBarUnit,
-            x = scaleBarStyling_inputs()$x,
-            y = scaleBarStyling_inputs()$y,
-            labelStyle = scaleBarStyling_inputs()$labelStyle,
-            scaleBarLineStyle = scaleBarStyling_inputs()$scaleBarLineStyle,
-            scaleBarTickStyle = scaleBarStyling_inputs()$scaleBarTickStyle,
-            textPadding = scaleBarStyling_inputs()$textPadding
+            x = scaleBarStyling$x,
+            y = scaleBarStyling$y,
+            labelStyle = scaleBarStyling$labelStyle,
+            scaleBarLineStyle = scaleBarStyling$scaleBarLineStyle,
+            scaleBarTickStyle = scaleBarStyling$scaleBarTickStyle,
+            textPadding = scaleBarStyling$textPadding
           ) %>%
-          GC_clusterTitle(
+          call_gc(GC_clusterTitle, .,
             title = clusterTitle_inputs()$title,
             subtitle = clusterTitle_inputs()$subtitle,
-            titleFont = clusterTitleStyling_inputs()$titleFont,
-            subtitleFont = clusterTitleStyling_inputs()$subtitleFont,
+            titleFont = clusterTitleStyling$titleFont,
+            subtitleFont = clusterTitleStyling$subtitleFont,
             show = clusterTitle_inputs()$show,
-            height = clusterTitleStyling_inputs()$height,
-            x = clusterTitleStyling_inputs()$x,
-            y = clusterTitleStyling_inputs()$y,
-            align = clusterTitleStyling_inputs()$align,
-            spacing = clusterTitleStyling_inputs()$spacing
+            height = clusterTitleStyling$height,
+            x = clusterTitleStyling$x,
+            y = clusterTitleStyling$y,
+            align = clusterTitleStyling$align,
+            spacing = clusterTitleStyling$spacing
           ) %>%
-          GC_clusterFooter(
+          call_gc(GC_clusterFooter, .,
             title = clusterFooter_inputs()$title,
             subtitle = clusterFooter_inputs()$subtitle,
             show = clusterFooter_inputs()$show,
-            subtitleFont = clusterFooterStyling_inputs()$subtitleFont,
-            titleFont = clusterFooterStyling_inputs()$titleFont,
-            height = clusterFooterStyling_inputs()$height,
-            x = clusterFooterStyling_inputs()$x,
-            y = clusterFooterStyling_inputs()$y,
-            align = clusterFooterStyling_inputs()$align,
-            spacing = clusterFooterStyling_inputs()$spacing
+            subtitleFont = clusterFooterStyling$subtitleFont,
+            titleFont = clusterFooterStyling$titleFont,
+            height = clusterFooterStyling$height,
+            x = clusterFooterStyling$x,
+            y = clusterFooterStyling$y,
+            align = clusterFooterStyling$align,
+            spacing = clusterFooterStyling$spacing
           ) %>%
-          GC_legend(
-            show = legend_inputs()$showLegend,
+          call_gc(GC_legend, .,
+            show = legend$showLegend,
             group = r$input[["group"]],
-            position = legend_inputs()$legendPosition,
-            x = legend_inputs()$legendX,
-            y = legend_inputs()$legendY,
-            legendTextOptions = list(
-              fontSize = legendStyling_inputs()$legendFontSize,
-              fontFamily = legendStyling_inputs()$legendFontFamily,
-              fill = legendStyling_inputs()$legendFill
-            )
+            position = legend$legendPosition,
+            align = legend$legendAlign,
+            x = legend$legendX,
+            y = legend$legendY,
+            corner_radius = legendStyling$cornerRadius,
+            legendTextOptions = Filter(Negate(is.null), list(
+              fontSize = legendStyling$legendFontSize,
+              fontFamily = legendStyling$legendFontFamily,
+              fill = legendStyling$legendFill
+            ))
           ) %>%
-          GC_coordinates(
+          call_gc(GC_coordinates, .,
             show = coordinates_inputs()$showCoordinates,
             ticksFormat = coordinates_inputs()$ticksFormat,
-            yPositionTop = coordinatesStyling_inputs()$yPositionTop,
-            yPositionBottom = coordinatesStyling_inputs()$yPositionBottom,
-            rotate = coordinatesStyling_inputs()$rotate,
-            overlapThreshold = coordinatesStyling_inputs()$overlapThreshold,
-            tickStyle = coordinatesStyling_inputs()$tickStyle,
-            textStyle = coordinatesStyling_inputs()$textStyle
+            yPositionTop = coordinatesStyling$yPositionTop,
+            yPositionBottom = coordinatesStyling$yPositionBottom,
+            rotate = coordinatesStyling$rotate,
+            overlapThreshold = coordinatesStyling$overlapThreshold,
+            tickStyle = coordinatesStyling$tickStyle,
+            textStyle = coordinatesStyling$textStyle
           ) %>%
-          GC_clusterLabel(
+          call_gc(GC_clusterLabel, .,
             show = clusterLabel_inputs()$show,
             title = clusterLabel_inputs()$text,
-            width = clusterLabelStyling_inputs()$width,
-            position = clusterLabelStyling_inputs()$position,
-            wrapLabel = clusterLabelStyling_inputs()$wrapLabel,
-            x = clusterLabelStyling_inputs()$x,
-            y = clusterLabelStyling_inputs()$y,
-            fontSize = clusterLabelStyling_inputs()$fontSize,
-            fontStyle = clusterLabelStyling_inputs()$fontStyle,
-            fontWeight = clusterLabelStyling_inputs()$fontWeight,
-            fontFamily = clusterLabelStyling_inputs()$fontFamily,
-            fill = clusterLabelStyling_inputs()$fill
+            subtitle = clusterLabel_inputs()$subtitle,
+            width = clusterLabelStyling$width,
+            position = clusterLabelStyling$position,
+            align = clusterLabelStyling$align,
+            spacing = clusterLabelStyling$spacing,
+            subtitleFont = clusterLabelStyling$subtitleFont,
+            wrapLabel = clusterLabelStyling$wrapLabel,
+            x = clusterLabelStyling$x,
+            y = clusterLabelStyling$y,
+            fontSize = clusterLabelStyling$fontSize,
+            fontStyle = clusterLabelStyling$fontStyle,
+            fontWeight = clusterLabelStyling$fontWeight,
+            fontFamily = clusterLabelStyling$fontFamily,
+            fill = clusterLabelStyling$fill
           ) %>%
-          GC_sequence(
-            show = sequence_inputs()$showSequence,
-            y = sequence_inputs()$sequenceY,
-            sequenceStyle = list(
-              stroke = sequence_inputs()$sequenceStroke,
-              strokeWidth = sequence_inputs()$sequenceStrokeWidth
-            ),
-            markerStyle = list(
-              stroke = sequence_inputs()$sequenceMarkerStroke,
-              strokeWidth = sequence_inputs()$sequenceMarkerStrokeWidth
-            )
+          call_gc(GC_sequence, .,
+            show = sequence$showSequence,
+            y = sequence$sequenceY,
+            sequenceStyle = Filter(Negate(is.null), list(
+              stroke = sequence$sequenceStroke,
+              strokeWidth = sequence$sequenceStrokeWidth
+            )),
+            markerStyle = Filter(Negate(is.null), list(
+              stroke = sequence$sequenceMarkerStroke,
+              strokeWidth = sequence$sequenceMarkerStrokeWidth
+            ))
           ) %>%
-          GC_color(
+          call_gc(GC_color, .,
             colorScheme = if (
               !is.null(color_inputs()$customColors) &&
               any(nzchar(color_inputs()$customColors))
-            ) NULL else color_inputs()$colorScheme,
+            ) NULL else colors$colorScheme,
             customColors = make_named_color_list(r$cluster_data, gene_inputs()$geneGroup, color_inputs()$customColors)
           ) %>%
-          GC_tooltip(
+          call_gc(GC_tooltip, .,
             show = tooltip_inputs()$show,
             formatter = tooltip_inputs()$formatter
           )
+
+        if (patterns$show) {
+          chart <- GC_pattern(
+            chart,
+            color = patterns$color,
+            # NULL draws the patterns on top of the gene colours
+            background = patterns$background,
+            size = if (is.null(patterns$size) || is.na(patterns$size)) 6 else patterns$size
+          )
+        }
+
+        if (isTRUE(tooltip_inputs()$trackMouse)) {
+          chart <- GC_trackMouse(chart)
+        }
+
+        chart
       },
       warning = function(w) {
         if (!r$input[["warning"]]) {
@@ -285,57 +344,26 @@ function(input, output, session) {
         }
       )
     }
-    ####################### Gene alignment #####################################
-    if(!is.null(alignment_inputs()$alignGenes) && alignment_inputs()$alignGenes){
-      # Display alignment warnings/errors in shiny app
-      tryCatch(
-        withCallingHandlers({
-          GC_chart_object <-
-            GC_chart_object %>%
-            GC_align(
-              id_column = alignment_inputs()$idColumn,
-              id = alignment_inputs()$id,
-              align = alignment_inputs()$align
-            )
-        },
-        warning = function(w) {
-          # Show the warning in the UI as a yellow notification
-          showNotification(
-            paste("Warning:", conditionMessage(w)),
-            type = "warning",
-            duration = 5
-          )
-          # Prevent the warning from also bubbling up to the console
-          invokeRestart("muffleWarning")
-        }),
-        error = function(e) {
-          # Show the error in the UI as a red notification
-          showNotification(
-            paste("Error:", conditionMessage(e)),
-            type = "error",
-            duration = 8
-          )
-          # Return the original object unchanged when there's an error
-          GC_chart_object
-        }
-      )
-    }
     ####################### Gene links #########################################
+    linksStyling <- themed("linksStyling", geneLinksStyling_inputs())
     if(!is.null(links_inputs()$show) && links_inputs()$show){
       # Display alignment warnings/errors in shiny app
       tryCatch({
         GC_chart_object <-
           GC_chart_object %>%
-          GC_links(
+          call_gc(GC_links, .,
             group = links_inputs()$group,
-            curve = geneLinksStyling_inputs()$curve,
+            curve = linksStyling$curve,
             value1 = links_inputs()$value1,
             value2 = links_inputs()$value2,
-            use_group_colors = geneLinksStyling_inputs()$use_group_colors,
-            normal_color = geneLinksStyling_inputs()$normal_color,
-            inverted_color = geneLinksStyling_inputs()$inverted_color,
-            linkWidth = geneLinksStyling_inputs()$linkWidth,
-            linkStyle = geneLinksStyling_inputs()$linkStyle
+            use_group_colors = linksStyling$use_group_colors,
+            normal_color = linksStyling$normal_color,
+            inverted_color = linksStyling$inverted_color,
+            low_color = linksStyling$low_color,
+            vmin = linksStyling$vmin,
+            vmax = linksStyling$vmax,
+            linkWidth = linksStyling$linkWidth,
+            linkStyle = linksStyling$linkStyle
           )
       },
       error = function(e) {

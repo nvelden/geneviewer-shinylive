@@ -35,6 +35,13 @@ ui_clusterLabel <- function(id) {
           placeholder = "Label 1, Label 2, ..."
         )
     ),
+    div(style = "margin-bottom:-20px;",
+        textInput(
+          inputId = ns("clusterSubtitle"),
+          label = "Subtitle text",
+          placeholder = "Species 1, Species 2, ..."
+        )
+    ),
 
     div(style = "padding-top: 10px;",
         actionLink(
@@ -65,7 +72,8 @@ server_clusterLabel <- function(id, r = r) {
     reactive({
       list(
         show = input$showClusterLabel,
-        text = parse_delimited_input(input$clusterLabel)
+        text = parse_delimited_input(input$clusterLabel),
+        subtitle = parse_delimited_input(input$clusterSubtitle)
       )
     })
   })

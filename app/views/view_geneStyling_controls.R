@@ -41,6 +41,7 @@ server_geneStyling <- function(id, r = r) {
       strokeWidth = 1,
       arrowheadWidth = NULL,
       arrowheadHeight = NULL,
+      cornerRadius = NULL,
       y = 50
     )
 
@@ -92,6 +93,17 @@ server_geneStyling <- function(id, r = r) {
                                     label = "Border Color:",
                                     value = isolate(vals$strokeColor),
                                     placeholder = "e.g., #000000, black"
+                                  )
+                           )
+                         ),
+                         fluidRow(
+                           column(6,
+                                  numericInput(
+                                    inputId = ns("cornerRadius"),
+                                    label = "Corner Radius:",
+                                    value = isolate(vals$cornerRadius),
+                                    min = 0,
+                                    step = 1
                                   )
                            )
                          )
@@ -155,16 +167,20 @@ server_geneStyling <- function(id, r = r) {
     observeEvent(input$strokeWidth, { vals$strokeWidth <- input$strokeWidth })
     observeEvent(input$arrowheadWidth, { vals$arrowheadWidth <- input$arrowheadWidth })
     observeEvent(input$arrowheadHeight, { vals$arrowheadHeight <- input$arrowheadHeight })
+    observeEvent(input$cornerRadius, { vals$cornerRadius <- input$cornerRadius })
     observeEvent(input$y, { vals$y <- input$y })
 
     # 5) Return reactive values for the main application
     reactive({
+      # Empty numeric inputs (NA) leave the option to geneviewer
+      num <- function(x) if (is.null(x) || is.na(x)) NULL else x
       list(
-        strokeColor = input$strokeColor,
-        strokeWidth = input$strokeWidth,
-        arrowheadWidth = input$arrowheadWidth,
-        arrowheadHeight = input$arrowheadHeight,
-        y = input$y
+        strokeColor = input$strokeColor %||% vals$strokeColor,
+        strokeWidth = num(input$strokeWidth %||% vals$strokeWidth),
+        arrowheadWidth = num(input$arrowheadWidth %||% vals$arrowheadWidth),
+        arrowheadHeight = num(input$arrowheadHeight %||% vals$arrowheadHeight),
+        cornerRadius = num(input$cornerRadius %||% vals$cornerRadius),
+        y = num(input$y %||% vals$y)
       )
     })
   })

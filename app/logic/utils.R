@@ -78,3 +78,40 @@ order_cluster_data <- function(data, cluster_col, order_vec) {
 
   return(df)
 }
+
+#' Drop the settings that still have their default value
+#'
+#' Used when a theme is set: options the user left at the app default are
+#' dropped, so the theme sets them instead.
+#'
+#' @param x A value or (nested) list of settings
+#' @param default The same settings with their default values
+#' @return x without the unchanged settings, or NULL when nothing changed
+#' @export
+drop_unchanged <- function(x, default) {
+  if (is.list(x) && is.list(default) && !is.null(names(x))) {
+    out <- lapply(names(x), function(n) drop_unchanged(x[[n]], default[[n]]))
+    names(out) <- names(x)
+    out <- Filter(Negate(is.null), out)
+    if (length(out) == 0) NULL else out
+  } else if (identical(x, default)) {
+    NULL
+  } else {
+    x
+  }
+}
+
+#' Call a GC_ function, leaving out NULL arguments
+#'
+#' Arguments left out take the package default (or the theme), where a NULL
+#' could be sent to the chart as an empty value.
+#'
+#' @param fun A GC_ function
+#' @param chart The GC chart object
+#' @param ... Arguments of fun
+#' @return The result of fun
+#' @export
+call_gc <- function(fun, chart, ...) {
+  args <- Filter(function(a) !is.null(a) && !(is.list(a) && length(a) == 0), list(...))
+  do.call(fun, c(list(chart), args))
+}

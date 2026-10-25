@@ -45,6 +45,7 @@ server_scaleStyling <- function(id, r = r) {
       ticksFormat = ",.0f",
       scaleBreakThreshold = 20,
       scaleBreakPadding = 1,
+      scaleBreakPaddingUnit = "%",
       # Tick styling values
       tickStroke = "grey",
       tickStrokeWidth = 1,
@@ -168,6 +169,16 @@ server_scaleStyling <- function(id, r = r) {
                              value = isolate(vals$scaleBreakPadding),
                              min = 0,
                              step = 0.5
+                           )
+                    )
+                  ),
+                  fluidRow(
+                    column(6, offset = 6,
+                           selectInput(
+                             inputId = ns("scaleBreakPaddingUnit"),
+                             label = "Padding Unit",
+                             choices = c("% of region" = "%", "Base pairs" = "bp"),
+                             selected = isolate(vals$scaleBreakPaddingUnit)
                            )
                     )
                   )
@@ -336,6 +347,7 @@ server_scaleStyling <- function(id, r = r) {
     observeEvent(input$ticksFormat, vals$ticksFormat <- input$ticksFormat)
     observeEvent(input$scaleBreakThreshold, vals$scaleBreakThreshold <- input$scaleBreakThreshold)
     observeEvent(input$scaleBreakPadding, vals$scaleBreakPadding <- input$scaleBreakPadding)
+    observeEvent(input$scaleBreakPaddingUnit, vals$scaleBreakPaddingUnit <- input$scaleBreakPaddingUnit)
     observeEvent(input$tickStroke, vals$tickStroke <- input$tickStroke)
     observeEvent(input$tickStrokeWidth, vals$tickStrokeWidth <- input$tickStrokeWidth)
     observeEvent(input$tickLineLength, vals$tickLineLength <- input$tickLineLength)
@@ -368,7 +380,12 @@ server_scaleStyling <- function(id, r = r) {
         ticksCount = vals$ticksCount,
         ticksFormat = vals$ticksFormat,
         scaleBreakThreshold = vals$scaleBreakThreshold,
-        scaleBreakPadding = vals$scaleBreakPadding,
+        # A number is a percentage; "500bp" is padding in base pairs
+        scaleBreakPadding = if (identical(vals$scaleBreakPaddingUnit, "bp")) {
+          paste0(vals$scaleBreakPadding, "bp")
+        } else {
+          vals$scaleBreakPadding
+        },
         y = vals$yPosition,
         tickStyle = list(
           stroke = vals$tickStroke,

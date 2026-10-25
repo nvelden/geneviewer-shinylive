@@ -42,12 +42,15 @@ server_clusterLabelStyling <- function(id, r = r) {
       x = 0,
       y = 0,
       position = "left",
+      align = "center",
+      spacing = NULL,
       wrapLabel = TRUE,
       labelFontSize = 12,
       labelFontWeight = "bold",
       labelFontStyle = "normal",
       labelFontFamily = "sans-serif",
-      labelColor = "black"
+      labelColor = "black",
+      subtitleFontSize = 11
     )
 
     # 2) Track visibility (start hidden)
@@ -122,6 +125,25 @@ server_clusterLabelStyling <- function(id, r = r) {
                   ),
                   fluidRow(
                     column(6,
+                           selectInput(
+                             inputId = ns("align"),
+                             label = "Align",
+                             choices = c("left", "center", "right"),
+                             selected = isolate(vals$align)
+                           )
+                    ),
+                    column(6,
+                           numericInput(
+                             inputId = ns("spacing"),
+                             label = "Subtitle spacing",
+                             value = isolate(vals$spacing),
+                             min = 0,
+                             step = 1
+                           )
+                    )
+                  ),
+                  fluidRow(
+                    column(6,
                            checkboxInput(
                              inputId = ns("wrapLabel"),
                              label = "Wrap Label",
@@ -181,6 +203,16 @@ server_clusterLabelStyling <- function(id, r = r) {
                              label = "Color",
                              value = isolate(vals$labelColor)
                            )
+                    ),
+                    column(6,
+                           numericInput(
+                             inputId = ns("subtitleFontSize"),
+                             label = "Subtitle size (px)",
+                             value = isolate(vals$subtitleFontSize),
+                             min = 6,
+                             max = 48,
+                             step = 1
+                           )
                     )
                   )
               )
@@ -209,6 +241,15 @@ server_clusterLabelStyling <- function(id, r = r) {
     observeEvent(input$position, ignoreInit = TRUE, {
       if (!is.null(input$position)) vals$position <- input$position
     })
+    observeEvent(input$align, ignoreInit = TRUE, {
+      if (!is.null(input$align)) vals$align <- input$align
+    })
+    observeEvent(input$spacing, ignoreInit = TRUE, {
+      vals$spacing <- if (is.na(input$spacing)) NULL else input$spacing
+    })
+    observeEvent(input$subtitleFontSize, ignoreInit = TRUE, {
+      if (!is.null(input$subtitleFontSize)) vals$subtitleFontSize <- input$subtitleFontSize
+    })
     observeEvent(input$wrapLabel, ignoreInit = TRUE, {
       if (!is.null(input$wrapLabel)) vals$wrapLabel <- input$wrapLabel
     })
@@ -234,6 +275,11 @@ server_clusterLabelStyling <- function(id, r = r) {
         x            = input$x %||% vals$x,
         y            = input$y %||% vals$y,
         position     = input$position %||% vals$position,
+        align        = input$align %||% vals$align,
+        spacing      = vals$spacing,
+        subtitleFont = list(
+          fontSize = paste0(input$subtitleFontSize %||% vals$subtitleFontSize, "px")
+        ),
         wrapLabel    = input$wrapLabel %||% vals$wrapLabel,
         fontSize     = paste0(input$labelFontSize %||% vals$labelFontSize, "px"),
         fontWeight   = input$labelFontWeight %||% vals$labelFontWeight,

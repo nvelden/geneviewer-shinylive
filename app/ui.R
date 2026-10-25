@@ -23,6 +23,7 @@ box::use(
   ./views/view_legend_controls[ui_legend],
   ./views/view_legendStyling_controls[ui_legendStyling],
   ./views/view_color_controls[ui_color],
+  ./views/view_theme_controls[ui_theme],
   ./views/view_sequence_controls[ui_sequence],
   ./views/view_coordinates_controls[ui_coordinates],
   ./views/view_coordinatesStyling_controls[ui_coordinatesStyling],
@@ -45,6 +46,7 @@ ui <- dashboardPage(
   ")),
     sidebarMenu(
       ui_load("loadControls"),
+      ui_theme("themeControls"),
       ui_genes("geneControls"),
       ui_sequence("sequenceControls"),
       ui_labels("labelControls"),

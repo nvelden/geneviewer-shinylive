@@ -37,6 +37,13 @@ ui_tooltip <- function(id) {
           options = list(placeholder = "Select values")
         )
     ),
+    div(style = "margin-bottom:-20px;",
+        checkboxInput(
+          inputId = ns("trackMouse"),
+          label   = "Show position on hover",
+          value   = FALSE
+        )
+    ),
     div(style = "height:20px;")
   )
 }
@@ -93,7 +100,8 @@ server_tooltip <- function(id, r = NULL) {
       list(
         show = show,
         columns = cols,
-        formatter = formatter
+        formatter = formatter,
+        trackMouse = isTRUE(input$trackMouse)
       )
     })
 
