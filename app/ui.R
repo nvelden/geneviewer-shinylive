@@ -119,7 +119,19 @@ ui <- block_page(
       )
     )
   ),
-  tags$head(tags$link(rel = "stylesheet", href = "app.css")),
+  tags$head(
+    tags$link(rel = "stylesheet", href = "app.css"),
+    # Picking a section opens the settings when they are collapsed
+    tags$script(HTML("
+      document.addEventListener('click', function (event) {
+        if (!event.target.closest('#sb-sidebar .sb-nav-item')) return;
+        var page = document.querySelector('.sb-page');
+        if (page && page.getAttribute('data-sidebar-right-collapsed') === 'true') {
+          document.querySelector('#settings .sb-sidebar-toggle').click();
+        }
+      });
+    "))
+  ),
   block_toaster("toasts"),
   tags$div(
     class = "gv-workspace",
