@@ -64,11 +64,20 @@ nav_items <- unlist(lapply(names(nav_groups), function(group) {
   )
 }), recursive = FALSE)
 
-settings_panels <- lapply(names(sections), function(key) {
+inspector_panels <- lapply(names(sections), function(key) {
   s <- sections[[key]]
   conditionalPanel(
     sprintf("input.section === '%s'", key),
-    block_card(title = s[[3]], description = s[[4]], class = "gv-settings-card", s[[5]])
+    class = "gv-inspector-panel",
+    tags$header(
+      class = "gv-inspector-header",
+      tags$div(class = "gv-inspector-icon", block_icon(s[[2]], size = "sm")),
+      tags$div(
+        tags$h2(class = "gv-inspector-title", s[[3]]),
+        tags$p(class = "gv-inspector-description", s[[4]])
+      )
+    ),
+    tags$div(class = "gv-inspector-body", s[[5]])
   )
 })
 
@@ -91,11 +100,11 @@ ui <- block_page(
       block_cluster(
         gap = "sm",
         tags$a(class = "gv-header-link", href = "https://nvelden.github.io/geneviewer/",
-               target = "_blank", rel = "noopener", block_icon("external-link", size = "sm"),
-               "Documentation"),
+               target = "_blank", rel = "noopener", `aria-label` = "Documentation", block_icon("external-link", size = "sm"),
+               tags$span(class = "gv-header-link-text", "Documentation")),
         tags$a(class = "gv-header-link", href = "https://github.com/nvelden/geneviewer-shinylive/issues",
-               target = "_blank", rel = "noopener", block_icon("message-circle", size = "sm"),
-               "Feedback"),
+               target = "_blank", rel = "noopener", `aria-label` = "Feedback", block_icon("message-circle", size = "sm"),
+               tags$span(class = "gv-header-link-text", "Feedback")),
         block_dark_mode_toggle()
       )
     )
@@ -104,15 +113,19 @@ ui <- block_page(
   block_toaster("toasts"),
   tags$div(
     class = "gv-workspace",
-    tags$div(class = "gv-settings", settings_panels),
-    tags$div(
-      class = "gv-preview",
-      block_card(
-        title = "Preview",
-        description = "Hover the chart and use the download icon to save it as SVG or PNG.",
-        class = "gv-preview-card",
-        tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto"))
-      )
-    )
+    tags$main(
+      class = "gv-canvas-area",
+      tags$div(
+        class = "gv-canvas-toolbar",
+        tags$div(
+          tags$h2(class = "gv-canvas-title", "Preview"),
+          tags$p(class = "gv-canvas-hint",
+                 "Hover the chart and use the download icon to save it as SVG or PNG.")
+        ),
+        uiOutput("dataBadges", inline = TRUE)
+      ),
+      tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto"))
+    ),
+    tags$aside(class = "gv-inspector", `aria-label` = "Chart settings", inspector_panels)
   )
 )

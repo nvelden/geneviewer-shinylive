@@ -4,48 +4,43 @@
 box::use(
   shiny[NS, moduleServer, reactive, observe, observeEvent, req, tags],
   shinyblocks[block_combobox, update_block_select, update_block_combobox],
-  ../logic/ui_helpers[field, text_field, num_field, select_field, switch_field, field_row,
-                      field_group, when_on, ALIGNMENTS],
+  ../logic/ui_helpers[field, text_field, num_field, select_field, switch_field,
+                      field_group, sections, when_on, ALIGNMENTS],
   ../logic/utils[num, txt, compact, parse_delimited_input]
 )
 
 #' @export
 ui_links <- function(id, data) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    switch_field(ns("show"), "Link genes between clusters"),
+  sections(
+    field_group(
+      NULL,
+      switch_field(ns("show"), "Link genes between clusters"),
+      when_on(ns, "show",
+        select_field(ns("group"), "Match on", names(data), "class",
+                     description = "Genes with the same value in this column are linked."),
+        text_field(ns("value1"), "Values (first)", placeholder = "gene1, gene2, ...", stacked = TRUE),
+        text_field(ns("value2"), "Values (second)", placeholder = "gene3, gene4, ...", stacked = TRUE)
+      )
+    ),
     when_on(ns, "show",
-      select_field(ns("group"), "Match on column", names(data), "class",
-                   description = "Genes with the same value in this column are linked."),
-      field_row(
-        text_field(ns("value1"), "Values (first)", placeholder = "gene1, gene2, ..."),
-        text_field(ns("value2"), "Values (second)", placeholder = "gene3, gene4, ...")
-      ),
       field_group(
         "Colors",
         switch_field(ns("useGroupColors"), "Use the gene colors"),
-        field_row(
-          text_field(ns("normalColor"), "Same strand", "#969696"),
-          text_field(ns("invertedColor"), "Opposite strand", "#d62728")
-        ),
-        field_row(
-          text_field(ns("lowColor"), "Lowest identity", "white"),
-          num_field(ns("vmin"), "Min %", 0, min = 0, max = 100, step = 1),
-          num_field(ns("vmax"), "Max %", 100, min = 0, max = 100, step = 1)
-        )
+        text_field(ns("normalColor"), "Same strand", "#969696"),
+        text_field(ns("invertedColor"), "Opposite strand", "#d62728"),
+        text_field(ns("lowColor"), "Lowest identity", "white"),
+        num_field(ns("vmin"), "Min identity (%)", 0, min = 0, max = 100, step = 1),
+        num_field(ns("vmax"), "Max identity (%)", 100, min = 0, max = 100, step = 1)
       ),
       field_group(
         "Shape",
         switch_field(ns("curve"), "Curved links", TRUE),
-        field_row(
-          num_field(ns("linkWidth"), "Width (share of gene)", 1, min = 0, max = 1, step = 0.1),
-          num_field(ns("opacity"), "Opacity", 1, min = 0, max = 1, step = 0.1)
-        ),
-        field_row(
-          text_field(ns("stroke"), "Border color", "black"),
-          num_field(ns("strokeWidth"), "Border width", 0.5, min = 0, step = 0.1)
-        )
+        num_field(ns("linkWidth"), "Width", 1, min = 0, max = 1, step = 0.1,
+                  description = "Share of the gene length, from 0 to 1."),
+        num_field(ns("opacity"), "Opacity", 1, min = 0, max = 1, step = 0.1),
+        text_field(ns("stroke"), "Border color", "black"),
+        num_field(ns("strokeWidth"), "Border width", 0.5, min = 0, step = 0.1)
       )
     )
   )
@@ -91,17 +86,19 @@ server_links <- function(id, r) {
 #' @export
 ui_alignment <- function(id, data) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    switch_field(ns("align"), "Align the clusters on a gene"),
-    when_on(ns, "align",
-      select_field(ns("idColumn"), "Gene column", names(data), "class"),
-      field(ns("id"), "Gene",
-            block_combobox(ns("id"), choices = unique(as.character(data$class)),
-                           selected = as.character(data$class[1]),
-                           search_placeholder = "Search genes")),
-      select_field(ns("position"), "Align on the gene's", ALIGNMENTS, "left",
-                   description = "The clusters are shifted, so all keep the same scale.")
+  sections(
+    field_group(
+      NULL,
+      switch_field(ns("align"), "Align the clusters on a gene",
+                   description = "The clusters are shifted, so all keep the same scale."),
+      when_on(ns, "align",
+        select_field(ns("idColumn"), "Gene column", names(data), "class"),
+        field(ns("id"), "Gene",
+              block_combobox(ns("id"), choices = unique(as.character(data$class)),
+                             selected = as.character(data$class[1]),
+                             search_placeholder = "Search genes", size = "sm")),
+        select_field(ns("position"), "Align on", ALIGNMENTS, "left")
+      )
     )
   )
 }
@@ -136,16 +133,21 @@ server_alignment <- function(id, r) {
 #' @export
 ui_tooltip <- function(id, data) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    switch_field(ns("show"), "Show a tooltip on genes", TRUE),
-    when_on(ns, "show",
-      field(ns("columns"), "Show in the tooltip",
-            block_combobox(ns("columns"), choices = names(data), selected = c("start", "end"),
-                           multiple = TRUE, placeholder = "Pick columns",
-                           search_placeholder = "Search columns"))
+  sections(
+    field_group(
+      "Tooltip",
+      switch_field(ns("show"), "Show a tooltip on genes", TRUE),
+      when_on(ns, "show",
+        field(ns("columns"), "Columns",
+              block_combobox(ns("columns"), choices = names(data), selected = c("start", "end"),
+                             multiple = TRUE, placeholder = "Pick columns",
+                             search_placeholder = "Search columns", size = "sm"),
+              stacked = TRUE))
     ),
-    switch_field(ns("trackMouse"), "Show the position under the mouse")
+    field_group(
+      "Position",
+      switch_field(ns("trackMouse"), "Show the position under the mouse")
+    )
   )
 }
 
@@ -173,21 +175,19 @@ server_tooltip <- function(id, r) {
 #' @export
 ui_size <- function(id) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    field_row(
+  sections(
+    field_group(
+      "Chart",
       num_field(ns("width"), "Width (px)", min = 100, step = 10,
-                description = "Empty fills the panel."),
+                description = "Empty fills the preview."),
       num_field(ns("height"), "Height (px)", 400, min = 100, step = 10)
     ),
     field_group(
       "Margins (px)",
-      field_row(
-        num_field(ns("top"), "Top", 5, min = 0, step = 5),
-        num_field(ns("bottom"), "Bottom", 5, min = 0, step = 5),
-        num_field(ns("left"), "Left", 50, min = 0, step = 5),
-        num_field(ns("right"), "Right", 50, min = 0, step = 5)
-      )
+      num_field(ns("top"), "Top", 5, min = 0, step = 5),
+      num_field(ns("bottom"), "Bottom", 5, min = 0, step = 5),
+      num_field(ns("left"), "Left", 50, min = 0, step = 5),
+      num_field(ns("right"), "Right", 50, min = 0, step = 5)
     )
   )
 }

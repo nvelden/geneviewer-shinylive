@@ -5,7 +5,7 @@ box::use(
   shiny[NS, moduleServer, reactive, tags],
   shinyblocks[block_tabs, block_tab],
   ../logic/ui_helpers[text_field, num_field, select_field, switch_field, field_row,
-                      field_group, when_on, FONT_FAMILIES, TICK_FORMATS],
+                      field_group, sections, when_on, FONT_FAMILIES, TICK_FORMATS],
   ../logic/utils[num, txt, px, compact]
 )
 
@@ -45,31 +45,32 @@ ui_scale <- function(id) {
   block_tabs(
     id = ns("tab"),
     variant = "line",
+    class = "gv-tabs",
     block_tab("Axis", value = "axis",
-      tags$div(
-        class = "gv-stack",
-        switch_field(ns("show"), "Show axis"),
-        switch_field(ns("reverse"), "Reverse the scale"),
-        switch_field(ns("breaks"), "Break long gaps between genes"),
-        when_on(ns, "breaks",
-          field_row(
-            num_field(ns("breakThreshold"), "Gap threshold (%)", 20, min = 1, max = 100, step = 1),
+      sections(
+        field_group(
+          NULL,
+          switch_field(ns("show"), "Show axis"),
+          switch_field(ns("reverse"), "Reverse the scale")
+        ),
+        field_group(
+          "Scale breaks",
+          switch_field(ns("breaks"), "Break long gaps between genes"),
+          when_on(ns, "breaks",
+            num_field(ns("breakThreshold"), "Threshold (%)", 20, min = 1, max = 100, step = 1),
             num_field(ns("breakPadding"), "Padding", 1, min = 0, step = 0.5),
             select_field(ns("breakPaddingUnit"), "Padding unit",
                          c("% of region" = "%", "Base pairs" = "bp"), "%")
           )
         ),
-        field_row(
-          select_field(ns("axisType"), "Axis values", c("Position" = "position", "Range" = "range"), "position"),
-          select_field(ns("axisPosition"), "Axis side", c("Bottom" = "bottom", "Top" = "top"), "bottom")
-        ),
-        field_row(
+        field_group(
+          "Axis",
+          select_field(ns("axisType"), "Values", c("Position" = "position", "Range" = "range"), "position"),
+          select_field(ns("axisPosition"), "Side", c("Bottom" = "bottom", "Top" = "top"), "bottom"),
           num_field(ns("ticksCount"), "Ticks", 10, min = 0, step = 1),
-          select_field(ns("ticksFormat"), "Tick format", TICK_FORMATS, ",.0f")
-        ),
-        field_row(
+          select_field(ns("ticksFormat"), "Format", TICK_FORMATS, ",.0f"),
           num_field(ns("padding"), "Padding (%)", 2, min = 0, step = 1),
-          num_field(ns("y"), "Vertical position", step = 1)
+          num_field(ns("y"), "Vertical", step = 1)
         ),
         field_group("Ticks", line_fields(ns, "tick_", "grey", length = 6)),
         field_group("Tick text", text_fields(ns, "text_", 10, "Arial")),
@@ -77,21 +78,24 @@ ui_scale <- function(id) {
       )
     ),
     block_tab("Scale bar", value = "scalebar",
-      tags$div(
-        class = "gv-stack",
-        switch_field(ns("bar_show"), "Show scale bar"),
-        when_on(ns, "bar_show",
-          field_row(
+      sections(
+        field_group(
+          NULL,
+          switch_field(ns("bar_show"), "Show scale bar"),
+          when_on(ns, "bar_show",
             text_field(ns("bar_title"), "Label", "1 kb"),
             num_field(ns("bar_unit"), "Length (bp)", 1000, min = 1, step = 100)
-          ),
-          field_row(
+          )
+        ),
+        when_on(ns, "bar_show",
+          field_group(
+            "Placement",
             num_field(ns("bar_x"), "X offset", 0, step = 1),
             num_field(ns("bar_y"), "Y offset", 10, step = 1),
-            select_field(ns("bar_labelPosition"), "Label side", c("Left" = "left", "Right" = "right"), "left")
+            select_field(ns("bar_labelPosition"), "Label side", c("Left" = "left", "Right" = "right"), "left"),
+            num_field(ns("bar_textPadding"), "Label padding", 0, step = 1)
           ),
-          field_group("Label", text_fields(ns, "bar_text_", 10, "sans-serif"),
-                      num_field(ns("bar_textPadding"), "Label padding", 0, step = 1)),
+          field_group("Label", text_fields(ns, "bar_text_", 10, "sans-serif")),
           field_group("Line", line_fields(ns, "bar_line_", "grey")),
           field_group("Ticks", line_fields(ns, "bar_tick_", "grey"))
         )
@@ -152,18 +156,20 @@ server_scale <- function(id) {
 #' @export
 ui_coordinates <- function(id) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    switch_field(ns("show"), "Show gene coordinates"),
+  sections(
+    field_group(
+      NULL,
+      switch_field(ns("show"), "Show gene coordinates"),
+      when_on(ns, "show",
+        select_field(ns("ticksFormat"), "Format", TICK_FORMATS, ",.0f"))
+    ),
     when_on(ns, "show",
-      select_field(ns("ticksFormat"), "Number format", TICK_FORMATS, ",.0f"),
-      field_row(
-        num_field(ns("yPositionTop"), "Top position", 55, step = 1),
-        num_field(ns("yPositionBottom"), "Bottom position", 45, step = 1)
-      ),
-      field_row(
-        num_field(ns("rotate"), "Rotation (°)", -45, min = -90, max = 90, step = 5),
-        num_field(ns("overlapThreshold"), "Overlap threshold", 20, min = 0, step = 1)
+      field_group(
+        "Placement",
+        num_field(ns("yPositionTop"), "Top", 55, step = 1),
+        num_field(ns("yPositionBottom"), "Bottom", 45, step = 1),
+        num_field(ns("rotate"), "Rotation (\u00b0)", -45, min = -90, max = 90, step = 5),
+        num_field(ns("overlapThreshold"), "Overlap limit", 20, min = 0, step = 1)
       ),
       field_group("Ticks", line_fields(ns, "tick_", "black", length = 5)),
       field_group("Text", text_fields(ns, "text_", 12, "sans-serif"))
@@ -194,11 +200,13 @@ server_coordinates <- function(id) {
 #' @export
 ui_sequence <- function(id) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    switch_field(ns("show"), "Show the sequence line", TRUE),
+  sections(
+    field_group(
+      NULL,
+      switch_field(ns("show"), "Show the sequence line", TRUE),
+      when_on(ns, "show", num_field(ns("y"), "Vertical", 50, step = 1))
+    ),
     when_on(ns, "show",
-      num_field(ns("y"), "Vertical position", 50, step = 1),
       field_group("Line", line_fields(ns, "seq_", "grey")),
       field_group("Break markers", line_fields(ns, "marker_", "grey"))
     )

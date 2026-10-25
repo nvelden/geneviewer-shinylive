@@ -5,11 +5,11 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, observeEvent, req, tags, isolate],
+  shiny[NS, moduleServer, reactive, observeEvent, req, tags, uiOutput, renderUI],
   shinyblocks[block_file_input, block_combobox, update_block_select,
-              update_block_combobox, block_badge, block_cluster, show_toast],
+              update_block_combobox, block_icon, show_toast],
   ../logic/logic_load_controls[set_inputs_from_columns, load_gene_data],
-  ../logic/ui_helpers[field, select_field, field_row, field_group, NONE],
+  ../logic/ui_helpers[field, select_field, field_group, NONE],
   ../logic/utils[opt]
 )
 
@@ -24,34 +24,36 @@ ui_data <- function(id, data) {
   defaults <- list(start = "start", end = "end", cluster = "cluster", group = "class", strand = NONE)
 
   tags$div(
-    class = "gv-stack",
-    block_file_input(
-      ns("files"),
-      variant = "dropzone",
-      multiple = TRUE,
-      accept = c(".csv", ".gbk", ".gb"),
-      dropzone_label = "Drop CSV or GenBank files here, or click to browse",
-      dropzone_hint = "Several GenBank files are read as one cluster each"
+    class = "gv-sections",
+    tags$section(
+      class = "gv-group",
+      tags$h4(class = "gv-group-title", "Dataset"),
+      uiOutput(ns("summary")),
+      block_file_input(
+        ns("files"),
+        variant = "dropzone",
+        multiple = TRUE,
+        accept = c(".csv", ".gbk", ".gb"),
+        dropzone_icon = "upload",
+        dropzone_label = "Drop files or click to upload",
+        dropzone_hint = "CSV, or GenBank files with one cluster each"
+      ),
+      tags$a(class = "gv-button-outline", href = "gene_cluster_example.csv", download = NA,
+             block_icon("download", size = "sm"), "Example CSV")
     ),
-    tags$a(class = "gv-link", href = "gene_cluster_example.csv", target = "_blank",
-           "Download an example CSV file"),
     field_group(
       "Columns",
-      field_row(
-        lapply(c("start", "end"), function(col) {
-          select_field(ns(col), COLUMNS[[col]], column_choices(cols), defaults[[col]])
-        })
-      ),
-      field_row(
-        lapply(c("cluster", "group", "strand"), function(col) {
-          select_field(ns(col), COLUMNS[[col]], column_choices(cols), defaults[[col]])
-        })
-      ),
-      field(ns("order"), "Clusters to show",
+      lapply(names(COLUMNS), function(col) {
+        select_field(ns(col), COLUMNS[[col]], column_choices(cols), defaults[[col]])
+      })
+    ),
+    field_group(
+      "Clusters",
+      field(ns("order"), "Show and order",
             block_combobox(ns("order"), choices = unique(as.character(data$cluster)),
-                           multiple = TRUE, placeholder = "All clusters, in data order",
-                           search_placeholder = "Search clusters"),
-            "Pick clusters to show them in that order.")
+                           multiple = TRUE, placeholder = "All clusters",
+                           search_placeholder = "Search clusters", size = "sm"),
+            "Pick clusters to show only those, in that order.", stacked = TRUE)
     )
   )
 }
@@ -70,11 +72,34 @@ server_data <- function(id, r, toaster_id) {
       update_block_combobox(session, "order", choices = clusters, selected = character(0))
     }
 
+    output$summary <- renderUI({
+      data <- r$cluster_data
+      col <- r$input[["cluster"]]
+      n_clusters <- if (!is.null(col) && col %in% names(data)) length(unique(data[[col]])) else 1
+      tags$div(
+        class = "gv-dataset",
+        tags$div(class = "gv-dataset-icon", block_icon("database", size = "sm")),
+        tags$div(
+          class = "gv-dataset-text",
+          tags$div(class = "gv-dataset-name", r$source_name %||% "Example: ophA clusters"),
+          tags$div(class = "gv-dataset-meta",
+                   sprintf("%d cluster%s \u00b7 %d genes \u00b7 %d columns",
+                           n_clusters, if (n_clusters == 1) "" else "s",
+                           nrow(data), ncol(data)))
+        )
+      )
+    })
+
     observeEvent(input$files, {
       req(input$files)
       tryCatch({
         data <- load_gene_data(input$files)
         r$cluster_data <- data
+        r$source_name <- if (nrow(input$files) == 1) {
+          input$files$name
+        } else {
+          sprintf("%s and %d more", input$files$name[1], nrow(input$files) - 1)
+        }
         r$input[["select_order"]] <- NULL
         set_inputs_from_columns(data, r, names(COLUMNS))
 

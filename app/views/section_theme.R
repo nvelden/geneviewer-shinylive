@@ -6,7 +6,7 @@
 box::use(
   shiny[NS, moduleServer, reactive, tags],
   shinyblocks[block_alert],
-  ../logic/ui_helpers[select_field, num_field, text_field, field_row, field_group,
+  ../logic/ui_helpers[select_field, num_field, text_field, field_group, sections,
                       NONE, FONT_FAMILIES],
   ../logic/utils[num, txt, opt, compact]
 )
@@ -25,29 +25,30 @@ THEMES <- c(
 #' @export
 ui_theme <- function(id) {
   ns <- NS(id)
-  tags$div(
-    class = "gv-stack",
-    select_field(ns("theme"), "Theme", THEMES, NONE,
-                 description = "Publication follows common journal figure guidelines; black & white fills the genes with patterns."),
+  sections(
+    field_group(
+      NULL,
+      select_field(ns("theme"), "Theme", THEMES, NONE,
+                   description = "Publication follows common journal figure guidelines; black & white fills the genes with patterns.")
+    ),
     field_group(
       "Text",
-      field_row(
-        num_field(ns("textScale"), "Text scale", 1, min = 0.5, max = 3, step = 0.1),
-        select_field(ns("fontFamily"), "Font", c("Theme font" = NONE, FONT_FAMILIES), NONE)
-      ),
-      field_row(
-        text_field(ns("textColor"), "Text color", placeholder = "e.g. black"),
-        text_field(ns("lineColor"), "Line color", placeholder = "e.g. grey")
-      )
+      num_field(ns("textScale"), "Scale", 1, min = 0.5, max = 3, step = 0.1),
+      select_field(ns("fontFamily"), "Font", c("Theme font" = NONE, FONT_FAMILIES), NONE),
+      text_field(ns("textColor"), "Color", placeholder = "Theme color")
     ),
     field_group(
       "Chart",
-      text_field(ns("background"), "Background", placeholder = "e.g. white")
+      text_field(ns("lineColor"), "Line color", placeholder = "Theme color"),
+      text_field(ns("background"), "Background", placeholder = "Theme color")
     ),
-    block_alert(
-      title = "Your settings come first",
-      description = "With a theme, the options you change in the other sections override it; everything you leave alone follows the theme.",
-      icon = "info"
+    field_group(
+      NULL,
+      block_alert(
+        title = "Your settings come first",
+        description = "With a theme, the options you change in the other sections override it; everything you leave alone follows the theme.",
+        icon = "info"
+      )
     )
   )
 }

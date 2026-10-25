@@ -83,6 +83,17 @@ function(input, output, session) {
     )
   }
 
+  output$dataBadges <- renderUI({
+    data <- r$cluster_data
+    col <- r$input[["cluster"]]
+    n_clusters <- if (!is.null(col) && col %in% names(data)) length(unique(data[[col]])) else 1
+    shinyblocks::block_cluster(
+      gap = "sm",
+      shinyblocks::block_badge(sprintf("%d clusters", n_clusters), variant = "outline"),
+      shinyblocks::block_badge(sprintf("%d genes", nrow(data)), variant = "outline")
+    )
+  })
+
   output$gcChart <- geneviewer::renderGC_chart({
     data <- order_cluster_data(
       data = r$cluster_data,

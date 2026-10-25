@@ -7,8 +7,8 @@
 box::use(
   shiny[NS, moduleServer, reactive, tags],
   shinyblocks[block_tabs, block_tab],
-  ../logic/ui_helpers[text_field, num_field, select_field, switch_field, field_row,
-                      field_group, when_on, ALIGNMENTS],
+  ../logic/ui_helpers[text_field, num_field, select_field, switch_field,
+                      field_group, sections, when_on, ALIGNMENTS],
   ../logic/utils[num, txt, px, compact, parse_delimited_input],
   ./section_labels[font_fields, font_values]
 )
@@ -16,18 +16,22 @@ box::use(
 #' Title or footer fields (prefix "title_" or "footer_")
 heading_fields <- function(ns, prefix, what, defaults) {
   id <- function(x) paste0(prefix, x)
-  tags$div(
-    class = "gv-stack",
-    switch_field(ns(id("show")), paste("Show cluster", what)),
+  sections(
+    field_group(
+      NULL,
+      switch_field(ns(id("show")), paste("Show cluster", what)),
+      when_on(ns, id("show"),
+        text_field(ns(id("title")), "Text", placeholder = "Cluster 1, Cluster 2, ...",
+                   description = "One per cluster, separated by commas.", stacked = TRUE),
+        text_field(ns(id("subtitle")), "Subtitle", placeholder = "Subtitle 1, Subtitle 2, ...",
+                   stacked = TRUE)
+      )
+    ),
     when_on(ns, id("show"),
-      text_field(ns(id("title")), "Text", placeholder = "Cluster 1, Cluster 2, ...",
-                 description = "One per cluster, separated by commas."),
-      text_field(ns(id("subtitle")), "Subtitle", placeholder = "Subtitle 1, Subtitle 2, ..."),
-      field_row(
+      field_group(
+        "Placement",
         select_field(ns(id("align")), "Align", ALIGNMENTS, defaults$align),
-        text_field(ns(id("height")), "Height", defaults$height)
-      ),
-      field_row(
+        text_field(ns(id("height")), "Height", defaults$height),
         num_field(ns(id("x")), "X offset", 0, step = 1),
         num_field(ns(id("y")), "Y offset", defaults$y, step = 1),
         num_field(ns(id("spacing")), "Line spacing", defaults$spacing, min = 0, step = 1)
@@ -66,6 +70,7 @@ ui_titles <- function(id) {
   block_tabs(
     id = ns("tab"),
     variant = "line",
+    class = "gv-tabs",
     block_tab("Title", value = "title",
       heading_fields(ns, "title_", "title",
                      list(align = "center", height = "40px", y = 5, spacing = 20,
@@ -77,28 +82,33 @@ ui_titles <- function(id) {
                           size = 14, weight = "normal", subSize = 12, subColor = "grey"))
     ),
     block_tab("Cluster label", value = "label",
-      tags$div(
-        class = "gv-stack",
-        switch_field(ns("label_show"), "Show cluster labels"),
+      sections(
+        field_group(
+          NULL,
+          switch_field(ns("label_show"), "Show cluster labels"),
+          when_on(ns, "label_show",
+            text_field(ns("label_title"), "Text", placeholder = "Label 1, Label 2, ...",
+                       description = "Empty uses the cluster names.", stacked = TRUE),
+            text_field(ns("label_subtitle"), "Subtitle", placeholder = "Species 1, Species 2, ...",
+                       stacked = TRUE)
+          )
+        ),
         when_on(ns, "label_show",
-          text_field(ns("label_title"), "Text", placeholder = "Label 1, Label 2, ...",
-                     description = "Empty uses the cluster names."),
-          text_field(ns("label_subtitle"), "Subtitle", placeholder = "Species 1, Species 2, ..."),
-          field_row(
+          field_group(
+            "Placement",
             select_field(ns("label_position"), "Side", c("Left" = "left", "Right" = "right"), "left"),
-            select_field(ns("label_align"), "Align", ALIGNMENTS, "center")
-          ),
-          field_row(
+            select_field(ns("label_align"), "Align", ALIGNMENTS, "center"),
             text_field(ns("label_width"), "Width", "100px"),
-            num_field(ns("label_spacing"), "Subtitle spacing", min = 0, step = 1)
-          ),
-          field_row(
             num_field(ns("label_x"), "X offset", 0, step = 1),
-            num_field(ns("label_y"), "Y offset", 0, step = 1)
+            num_field(ns("label_y"), "Y offset", 0, step = 1),
+            switch_field(ns("label_wrap"), "Wrap long labels", TRUE)
           ),
-          switch_field(ns("label_wrap"), "Wrap long labels", TRUE),
           field_group("Font", font_fields(ns, "label_", weight = "bold")),
-          num_field(ns("label_subSize"), "Subtitle size (px)", 11, min = 4, max = 72, step = 1)
+          field_group(
+            "Subtitle",
+            num_field(ns("label_subSize"), "Size (px)", 11, min = 4, max = 72, step = 1),
+            num_field(ns("label_spacing"), "Spacing", min = 0, step = 1)
+          )
         )
       )
     )
