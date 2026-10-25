@@ -41,22 +41,25 @@ jobs:
             posit-dev/r-shinylive
             sessioninfo
           cache-version: "1"
-      - name: Install geneviewer from R-universe
+      - name: Install geneviewer and shinyblocks from R-universe
         shell: Rscript {0}
         run: |
-          # Install the development version of geneviewer from R-universe, which
-          # also has its WebAssembly build for shinylive::export()
-          install.packages("geneviewer",
+          # Install the development versions from R-universe, which also has
+          # their WebAssembly builds for shinylive::export()
+          install.packages(c("geneviewer", "shinyblocks"),
             repos = c("https://nvelden.r-universe.dev", getOption("repos")))
-          packageDescription("geneviewer")[c("Version", "Repository", "RemoteSha")]
+          for (pkg in c("geneviewer", "shinyblocks")) {
+            print(packageDescription(pkg)[c("Package", "Version", "Repository", "RemoteSha")])
+          }
       - name: Find package dependencies
         shell: Rscript {0}
         id: packages
         run: |
           # Find package dependencies using {renv} and install with {pak}
-          # (not geneviewer: the R-universe version installed above is kept)
+          # (not geneviewer and shinyblocks: the R-universe versions installed
+          # above are kept)
           pak::pak(
-            setdiff(unique(renv::dependencies("app")$Package), "geneviewer")
+            setdiff(unique(renv::dependencies("app")$Package), c("geneviewer", "shinyblocks"))
           )
       - name: Build site
         shell: Rscript {0}

@@ -17,7 +17,9 @@ box::use(
 #' @return Character vector, single character string, or NULL
 #' @export
 parse_delimited_input <- function(input_value) {
-  if (input_value != "" && grepl(",", input_value)) {
+  if (is.null(input_value) || length(input_value) == 0) {
+    NULL
+  } else if (input_value != "" && grepl(",", input_value)) {
     trimws(strsplit(input_value, ",")[[1]])
   } else if (input_value != "") {
     input_value
@@ -94,7 +96,9 @@ drop_unchanged <- function(x, default) {
     names(out) <- names(x)
     out <- Filter(Negate(is.null), out)
     if (length(out) == 0) NULL else out
-  } else if (identical(x, default)) {
+  } else if (identical(x, default) ||
+             (is.numeric(x) && is.numeric(default) && length(x) == length(default) &&
+              isTRUE(all.equal(as.numeric(x), as.numeric(default))))) {
     NULL
   } else {
     x
@@ -115,3 +119,34 @@ call_gc <- function(fun, chart, ...) {
   args <- Filter(function(a) !is.null(a) && !(is.list(a) && length(a) == 0), list(...))
   do.call(fun, c(list(chart), args))
 }
+
+#' A number from a number input, or NULL when it is empty
+#' @export
+num <- function(x) {
+  if (is.null(x) || length(x) == 0 || identical(x, "")) return(NULL)
+  x <- suppressWarnings(as.numeric(x))
+  if (is.na(x)) NULL else x
+}
+
+#' Text from a text input, or NULL when it is empty
+#' @export
+txt <- function(x) {
+  if (is.null(x) || length(x) == 0 || !nzchar(trimws(x))) NULL else trimws(x)
+}
+
+#' A select value, or NULL for the "none" choice
+#' @export
+opt <- function(x, none = "__none__") {
+  if (is.null(x) || length(x) == 0 || identical(x, none) || !nzchar(x)) NULL else x
+}
+
+#' A number as pixels ("12px"), or NULL when it is empty
+#' @export
+px <- function(x) {
+  n <- num(x)
+  if (is.null(n)) NULL else paste0(n, "px")
+}
+
+#' Leave out NULL elements of a list
+#' @export
+compact <- function(x) Filter(Negate(is.null), x)

@@ -21,7 +21,8 @@ synonyms <- list(
   end     = c("end", "end_pos", "end_position", "stop", "to"),
   cluster = c("cluster", "locus", "region", "domain", "feature"),
   group   = c("group", "class", "category", "type", "family", "subfamily",
-              "clade", "taxon", "classification", "annotation", "feature_type"),
+              "clade", "taxon", "classification", "annotation", "feature_type",
+              "gene_kind"),
   strand  = c("strand", "orientation", "direction", "sense", "polarity", "frame", "reading_frame")
 )
 
