@@ -8,7 +8,11 @@ box::use(
   ./views/section_titles[server_titles],
   ./views/section_scale[server_scale, server_coordinates, server_sequence],
   ./views/section_compare[server_links, server_alignment, server_tooltip, server_size],
-  ./logic/utils[make_named_color_list, order_cluster_data, drop_unchanged, call_gc],
+  ./logic/utils[make_named_color_list, order_cluster_data],
+  ./logic/code_gen[chart_code, data_code],
+  ./logic/examples[EXAMPLES],
+  ./logic/ui_helpers[INPUT_TYPES, NONE],
+  ./views/section_data[column_choices],
 )
 
 function(input, output, session) {
@@ -20,12 +24,13 @@ function(input, output, session) {
       cluster = "cluster",
       group = "class"
     ),
-    cluster_data = geneviewer::ophA_clusters
+    cluster_data = geneviewer::ophA_clusters,
+    example = "ophA"
   )
 
   server_data("data", r = r, toaster_id = "toasts")
   theme_inputs <- server_theme("theme")
-  gene_inputs <- server_genes("genes")
+  gene_inputs <- server_genes("genes", r = r)
   color_inputs <- server_colors("colors")
   label_inputs <- server_labels("labels", r = r)
   legend_inputs <- server_legend("legend")
@@ -38,26 +43,36 @@ function(input, output, session) {
   tooltip_inputs <- server_tooltip("tooltip", r = r)
   size_inputs <- server_size("size")
 
-  # The first value of each set of style options is its default. With a theme,
-  # options left at their default are dropped, so the theme sets them.
-  style_defaults <- new.env()
-  themed <- function(name, x) {
-    if (!exists(name, envir = style_defaults, inherits = FALSE)) {
-      assign(name, x, envir = style_defaults)
+  # The geneviewer calls behind the chart, shown as R code under it
+  calls <- NULL
+  code <- reactiveVal("")
+
+  # Run a geneviewer function on the chart and record the call. Arguments
+  # come as lists; NULL and empty ones are left out unless keep_null is set.
+  add <- function(chart, name, ..., keep_null = FALSE, record = TRUE) {
+    # Run the earlier calls of a pipe first, so the calls are recorded in order
+    force(chart)
+    args <- do.call(c, list(...)) %||% list()
+    if (!keep_null) {
+      args <- Filter(function(a) !is.null(a) && !(is.list(a) && length(a) == 0), args)
     }
-    if (!isTRUE(theme_inputs()$active)) return(x)
-    drop_unchanged(x, get(name, envir = style_defaults)) %||% list()
+    if (record) calls[[length(calls) + 1]] <<- list(name = name, args = args)
+    do.call(getExportedValue("geneviewer", name), c(list(chart), args))
   }
 
-  # Add a GC_ component; arguments come as lists, NULL ones are left out
-  add <- function(chart, fun, ...) {
-    do.call(call_gc, c(list(fun, chart), ...))
+  # Components switched off do nothing; leave them out of the code
+  add_shown <- function(chart, name, args, ...) {
+    if (identical(args$show, FALSE)) return(chart)
+    add(chart, name, args, ...)
   }
 
   # Each message is shown once, so a warning does not repeat on every change
   shown <- new.env()
   notify <- function(message, variant = "warning") {
     if (exists(message, envir = shown, inherits = FALSE)) return(invisible())
+    # While an example's settings arrive the settings are a mix of the old and
+    # the new ones; their warnings are not meaningful
+    if (variant == "warning" && !is.null(isolate(r$pending))) return(invisible())
     assign(message, TRUE, envir = shown)
     shinyblocks::show_toast(
       toaster_id = "toasts",
@@ -83,6 +98,146 @@ function(input, output, session) {
     )
   }
 
+  # Examples ---------------------------------------------------------------
+
+  # The value of every setting at the start of the session is its default
+  defaults <- NULL
+  session$onFlushed(function() {
+    defaults <<- isolate(reactiveValuesToList(input))
+  }, once = TRUE)
+
+  # Is a setting already at a value (empty number fields are NA or "")
+  same_setting <- function(current, target) {
+    empty <- function(x) is.null(x) || length(x) == 0 || all(is.na(x)) || identical(x, "")
+    if (empty(current) && empty(target)) return(TRUE)
+    if (is.numeric(current) && is.numeric(target)) return(isTRUE(all.equal(current, target)))
+    identical(current, target)
+  }
+
+  # The choices of settings that list columns or values of the data
+  data_choices <- function(id, data, values) {
+    cols <- names(data)
+    # Values as choices: no NA, and not "" (the empty choice of shinyblocks)
+    values_of <- function(col) {
+      v <- unique(as.character(data[[col]]))
+      v[!is.na(v) & nzchar(v)]
+    }
+    switch(id,
+      "labels-label" = , "links-group" = , "alignment-idColumn" = cols,
+      "tooltip-columns" = cols,
+      "labels-styleBy" = , "genes-styleBy" = c("Group column" = NONE, cols),
+      "data-start" = , "data-end" = , "data-cluster" = , "data-group" = , "data-strand" =
+        column_choices(cols),
+      "data-order" = {
+        col <- values[["data-cluster"]] %||% NONE
+        if (col %in% cols) values_of(col) else character(0)
+      },
+      "alignment-id" = {
+        col <- values[["alignment-idColumn"]] %||% defaults[["alignment-idColumn"]]
+        if (isTRUE(col %in% cols)) values_of(col) else character(0)
+      },
+      NULL
+    )
+  }
+
+  # Set one setting to the value of the example, or back to its default
+  set_setting <- function(id, targets, data) {
+    type <- get(id, envir = INPUT_TYPES)
+    target <- targets[[id]]
+    choices <- data_choices(id, data, targets)
+    if (is.null(choices) && same_setting(isolate(input[[id]]), target)) return(invisible())
+    empty <- is.null(target) || length(target) == 0 || all(is.na(target))
+    switch(type,
+      text = , number = shinyblocks::update_block_input(
+        session, id, value = if (empty) "" else target),
+      textarea = shinyblocks::update_block_textarea(
+        session, id, value = if (empty) "" else target),
+      switch = shinyblocks::update_block_switch(session, id, checked = isTRUE(target)),
+      toggle = shinyblocks::update_block_toggle_group(session, id, selected = target),
+      select = if (is.null(choices)) {
+        shinyblocks::update_block_select(session, id, selected = target)
+      } else {
+        if (!isTRUE(target %in% choices)) target <- if (NONE %in% choices) NONE else choices[1]
+        shinyblocks::update_block_select(session, id, choices = choices, selected = target)
+      },
+      combobox = {
+        if (!is.null(choices)) target <- intersect(target, choices)
+        # A combobox needs at least one option: without any, clear the selection
+        if (is.null(choices) || length(choices) == 0) {
+          shinyblocks::update_block_combobox(session, id, selected = target %||% character(0))
+        } else {
+          shinyblocks::update_block_combobox(session, id, choices = choices,
+                                             selected = target %||% character(0))
+        }
+      }
+    )
+  }
+
+  # Set every setting; one that fails does not stop the others
+  apply_settings <- function(targets, data) {
+    failed <- character()
+    for (id in ls(INPUT_TYPES)) {
+      tryCatch(set_setting(id, targets, data), error = function(e) failed <<- c(failed, id))
+    }
+    if (length(failed) > 0) {
+      notify(paste("Some settings could not be set:", paste(failed, collapse = ", ")))
+    }
+  }
+
+  # Loading an example. The settings reach the browser as a series of updates
+  # and come back one by one. To draw the chart once, with all of them:
+  # 1. the example's settings are "pending": the chart waits, pickers that get
+  #    new choices take the pending values, and warnings are held back;
+  # 2. all settings are updated, then a marker; the browser handles updates in
+  #    order, so the marker comes back after all the settings;
+  # 3. when the marker comes back the chart is drawn, with the load's token,
+  #    and the browser lifts the loading cover when that chart arrives.
+  load_token <- 0
+  observeEvent(input[["data-example"]], {
+    key <- input[["data-example"]]
+    req(key %in% names(EXAMPLES))
+    example <- EXAMPLES[[key]]
+    load_token <<- load_token + 1
+    session$sendCustomMessage("gv-loading", list(token = load_token))
+
+    data <- example$data()
+    values <- example$inputs(data)
+    for (col in c("data-start", "data-end", "data-cluster", "data-group", "data-strand")) {
+      if (!col %in% names(values)) values[[col]] <- NONE
+    }
+    # Every setting: the example's value, or back to its default
+    targets <- sapply(ls(INPUT_TYPES), function(id) {
+      if (id %in% names(values)) values[[id]] else defaults[[id]]
+    }, simplify = FALSE)
+
+    r$pending <- list(token = load_token, targets = targets)
+    r$cluster_data <- data
+    r$source_files <- NULL
+    r$example <- key
+    r$source_name <- example$label
+    for (col in c("start", "end", "cluster", "group", "strand")) {
+      value <- values[[paste0("data-", col)]]
+      r$input[[col]] <- if (identical(value, NONE)) NULL else value
+    }
+    r$input[["select_order"]] <- NULL
+
+    tryCatch(
+      apply_settings(targets, data),
+      error = function(e) notify(paste("The example could not be loaded:", conditionMessage(e)),
+                                 "destructive")
+    )
+  }, ignoreInit = TRUE)
+
+  # The marker goes last: this observer runs after all others of the flush,
+  # also after the pickers that refill with the new data
+  observeEvent(r$pending$token, {
+    shinyblocks::update_block_input(session, "gvMarker", value = as.character(r$pending$token))
+  }, priority = -1000)
+
+  observeEvent(input$gvMarker, {
+    if (identical(input$gvMarker, as.character(r$pending$token))) r$pending <- NULL
+  })
+
   # Click to edit: a click on a part of the chart opens its settings
   click_sections <- list(
     genes = "genes", transcript = "genes", labels = "labels",
@@ -103,18 +258,9 @@ function(input, output, session) {
     session$sendCustomMessage("gv-open-settings", TRUE)
   })
 
-  output$dataBadges <- renderUI({
-    data <- r$cluster_data
-    col <- r$input[["cluster"]]
-    n_clusters <- if (!is.null(col) && col %in% names(data)) length(unique(data[[col]])) else 1
-    shinyblocks::block_cluster(
-      gap = "sm",
-      shinyblocks::block_badge(sprintf("%d clusters", n_clusters), variant = "outline"),
-      shinyblocks::block_badge(sprintf("%d genes", nrow(data)), variant = "outline")
-    )
-  })
-
   output$gcChart <- geneviewer::renderGC_chart({
+    # While an example's settings arrive, keep the chart that is shown
+    req(is.null(r$pending), cancelOutput = TRUE)
     data <- order_cluster_data(
       data = r$cluster_data,
       cluster_col = r$input[["cluster"]],
@@ -135,79 +281,106 @@ function(input, output, session) {
     links <- link_inputs()
     alignment <- alignment_inputs()
 
+    calls <<- list()
+    chart_args <- Filter(Negate(is.null), list(
+      start = r$input[["start"]],
+      end = r$input[["end"]],
+      cluster = r$input[["cluster"]],
+      group = group,
+      strand = r$input[["strand"]],
+      width = size$width,
+      height = size$height
+    ))
+    calls[[1]] <<- list(name = "GC_chart", args = chart_args)
+    # GC_grid() only when the margins are changed: with the default margins it
+    # just makes each cluster a few pixels lower
+    default_margin <- list(top = 5, bottom = 5, left = 50, right = 50)
+    margin_changed <- !isTRUE(all.equal(
+      lapply(size$margin[names(default_margin)], as.numeric), default_margin
+    ))
     chart <- safely(NULL, function(chart) {
-      geneviewer::GC_chart(
-        data,
-        start = r$input[["start"]],
-        end = r$input[["end"]],
-        cluster = r$input[["cluster"]],
-        group = group,
-        strand = r$input[["strand"]],
-        width = size$width,
-        height = size$height
-      ) |>
-        geneviewer::GC_grid(margin = size$margin)
+      chart <- do.call(geneviewer::GC_chart, c(list(data), chart_args))
+      if (margin_changed) chart <- add(chart, "GC_grid", list(margin = size$margin))
+      chart
     })
-    req(chart)
+    if (is.null(chart)) {
+      # No chart: tell the browser the load is over, so it lifts the cover
+      session$sendCustomMessage("gv-loaded", list(token = load_token))
+      req(FALSE)
+    }
 
     chart <- safely(chart, function(chart) {
       if (theme$active) {
-        chart <- do.call(geneviewer::GC_theme, c(list(chart), theme$settings))
+        chart <- add(chart, "GC_theme", theme$settings)
       }
 
-      color_scheme <- themed("colors", colors$style)$colorScheme
-      custom_colors <- if (!is.null(group) && group %in% names(data)) {
+      color_scheme <- colors$style$colorScheme
+      # Colours of named groups, or a list of colours for all groups in order
+      custom_colors <- colors$namedColors %||% if (!is.null(group) && group %in% names(data)) {
         make_named_color_list(data, group, colors$customColors)
       }
 
       chart <- chart |>
-        add(geneviewer::GC_genes, list(group = group), genes$args, themed("genes", genes$style)) |>
-        add(geneviewer::GC_labels, labels$args, themed("labels", labels$style)) |>
-        add(geneviewer::GC_scale, scale$args, themed("scale", scale$style)) |>
-        add(geneviewer::GC_scaleBar, scale$bar$args, themed("scaleBar", scale$bar$style)) |>
-        add(geneviewer::GC_clusterTitle, titles$title$args, themed("title", titles$title$style)) |>
-        add(geneviewer::GC_clusterFooter, titles$footer$args, themed("footer", titles$footer$style)) |>
-        add(geneviewer::GC_clusterLabel, titles$label$args, themed("clusterLabel", titles$label$style)) |>
-        add(geneviewer::GC_legend, list(group = group), legend$args, themed("legend", legend$style)) |>
-        add(geneviewer::GC_coordinates, coordinates$args, themed("coordinates", coordinates$style)) |>
-        add(geneviewer::GC_sequence, sequence$args, themed("sequence", sequence$style)) |>
-        add(geneviewer::GC_color,
-            list(colorScheme = if (is.null(custom_colors)) color_scheme,
+        add_shown("GC_title", c(titles$chart$args, titles$chart$style)) |>
+        add("GC_genes", list(group = group), genes$args, genes$style) |>
+        add_shown("GC_labels", c(labels$args, labels$style)) |>
+        add("GC_scale", scale$args, scale$style) |>
+        add_shown("GC_scaleBar", c(scale$bar$args, scale$bar$style)) |>
+        add_shown("GC_clusterTitle", c(titles$title$args, titles$title$style)) |>
+        add_shown("GC_clusterFooter", c(titles$footer$args, titles$footer$style)) |>
+        add_shown("GC_clusterLabel", c(titles$label$args, titles$label$style)) |>
+        add("GC_legend", list(group = group), legend$args, legend$style) |>
+        add_shown("GC_coordinates", c(coordinates$args, coordinates$style)) |>
+        add("GC_sequence", sequence$args, sequence$style) |>
+        add("GC_color",
+            list(colorScheme = if (is.null(colors$customColors)) color_scheme,
                  customColors = custom_colors)) |>
-        add(geneviewer::GC_tooltip, tooltip$args)
+        add("GC_tooltip", tooltip$args)
 
       if (colors$patterns$show) {
-        chart <- geneviewer::GC_pattern(
-          chart,
-          color = colors$patterns$color,
-          # NULL draws the patterns on top of the gene colours
-          background = colors$patterns$background,
-          size = colors$patterns$size
-        )
+        # background = NULL draws the patterns on top of the gene colours
+        chart <- add(chart, "GC_pattern", colors$patterns$args, keep_null = TRUE)
       }
       if (tooltip$trackMouse) {
-        chart <- geneviewer::GC_trackMouse(chart)
+        chart <- add(chart, "GC_trackMouse")
       }
+      # Click to edit is for the app only, so not part of the code
       if (isTRUE(input$editMode)) {
-        chart <- geneviewer::GC_events(chart, highlight = TRUE)
+        chart <- add(chart, "GC_events", list(highlight = TRUE), record = FALSE)
       }
       chart
     })
 
     if (alignment$align && !is.null(alignment$id)) {
       chart <- safely(chart, function(chart) {
-        geneviewer::GC_align(chart, id_column = alignment$id_column, id = alignment$id,
-                             align = alignment$position)
+        add(chart, "GC_align", list(id_column = alignment$id_column, id = alignment$id,
+                                    align = alignment$position))
       })
     }
 
     if (links$args$show) {
       chart <- safely(chart, function(chart) {
-        add(chart, geneviewer::GC_links, links$args[names(links$args) != "show"],
-            themed("links", links$style))
+        add(chart, "GC_links", links$args[names(links$args) != "show"],
+            links$style)
       })
     }
 
+    # The code is extra: a problem with it must not stop the chart
+    code(tryCatch(
+      chart_code(calls, data_code(
+        files = r$source_files,
+        cluster_col = r$input[["cluster"]],
+        order = r$input[["select_order"]],
+        example_code = EXAMPLES[[r$example %||% ""]]$code
+      ), trim = !theme$active),
+      error = function(e) paste("# The code could not be written:", conditionMessage(e))
+    ))
+    # The browser lifts the loading cover when the chart of its load arrives
+    chart$x$loadToken <- load_token
     chart
+  })
+
+  output$chartCode <- renderUI({
+    shinyblocks::block_code(code(), language = "r", line_numbers = FALSE)
   })
 }

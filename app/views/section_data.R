@@ -9,19 +9,29 @@ box::use(
   shinyblocks[block_file_input, block_combobox, update_block_select,
               update_block_combobox, block_icon, show_toast],
   ../logic/logic_load_controls[set_inputs_from_columns, load_gene_data],
-  ../logic/ui_helpers[field, select_field, field_group, NONE],
-  ../logic/utils[opt]
+  ../logic/ui_helpers[field, select_field, field_group, register_input, NONE],
+  ../logic/utils[opt],
+  ../logic/examples[EXAMPLES]
 )
 
 COLUMNS <- c(start = "Start", end = "End", cluster = "Cluster", group = "Group", strand = "Strand")
 
+#' @export
 column_choices <- function(cols) c("None" = NONE, stats::setNames(cols, cols))
+
+#' The examples to offer: all but the one that is loaded
+#' @export
+example_choices <- function(loaded = NULL) {
+  keys <- setdiff(names(EXAMPLES), loaded)
+  stats::setNames(keys, vapply(EXAMPLES[keys], `[[`, "", "label"))
+}
 
 #' @export
 ui_data <- function(id, data) {
   ns <- NS(id)
   cols <- names(data)
   defaults <- list(start = "start", end = "end", cluster = "cluster", group = "class", strand = NONE)
+  register_input(ns("order"), "combobox")
 
   tags$div(
     class = "gv-sections",
@@ -29,6 +39,8 @@ ui_data <- function(id, data) {
       class = "gv-group",
       tags$h4(class = "gv-group-title", "Dataset"),
       uiOutput(ns("summary")),
+      shinyblocks::block_select(ns("example"), example_choices("ophA"), selected = NULL,
+                                placeholder = "Load an example...", size = "sm"),
       block_file_input(
         ns("files"),
         variant = "dropzone",
@@ -62,6 +74,12 @@ ui_data <- function(id, data) {
 server_data <- function(id, r, toaster_id) {
   moduleServer(id, function(input, output, session) {
 
+    # Offer the examples that are not loaded; uploaded data offers all
+    observeEvent(r$example, {
+      update_block_select(session, "example", choices = example_choices(r$example),
+                          selected = NULL)
+    }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
     update_cluster_choices <- function() {
       col <- r$input[["cluster"]]
       clusters <- if (!is.null(col) && col %in% names(r$cluster_data)) {
@@ -69,7 +87,12 @@ server_data <- function(id, r, toaster_id) {
       } else {
         character(0)
       }
-      update_block_combobox(session, "order", choices = clusters, selected = character(0))
+      # A combobox needs at least one option: without clusters, clear the selection
+      if (length(clusters) > 0) {
+        update_block_combobox(session, "order", choices = clusters, selected = character(0))
+      } else {
+        update_block_combobox(session, "order", selected = character(0))
+      }
     }
 
     output$summary <- renderUI({
@@ -81,7 +104,7 @@ server_data <- function(id, r, toaster_id) {
         tags$div(class = "gv-dataset-icon", block_icon("database", size = "sm")),
         tags$div(
           class = "gv-dataset-text",
-          tags$div(class = "gv-dataset-name", r$source_name %||% "Example: ophA clusters"),
+          tags$div(class = "gv-dataset-name", r$source_name %||% EXAMPLES$ophA$label),
           tags$div(class = "gv-dataset-meta",
                    sprintf("%d cluster%s \u00b7 %d genes \u00b7 %d columns",
                            n_clusters, if (n_clusters == 1) "" else "s",
@@ -95,6 +118,8 @@ server_data <- function(id, r, toaster_id) {
       tryCatch({
         data <- load_gene_data(input$files)
         r$cluster_data <- data
+        r$source_files <- input$files$name
+        r$example <- "upload"
         r$source_name <- if (nrow(input$files) == 1) {
           input$files$name
         } else {

@@ -105,10 +105,6 @@
   gap: 0.5rem 1rem;
 }
 
-.gv-canvas-toolbar .sb-badge {
-  background: var(--background);
-}
-
 .gv-canvas-title {
   margin: 0;
   font-size: 0.875rem;
@@ -121,14 +117,39 @@
   color: var(--muted-foreground);
 }
 
-/* The chart keeps a white sheet, also in dark mode */
+/* The chart keeps a white sheet, also in dark mode, and its full height */
 .gv-canvas {
+  flex: none;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.12);
   padding: 1rem;
   overflow-x: auto;
+}
+
+/* The R code of the chart, below it */
+.gv-code {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 1rem;
+}
+
+.gv-code-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.gv-code {
+  flex: none;
+}
+
+.gv-code pre {
+  max-height: 24rem;
+  overflow: auto;
+  font-size: 0.8125rem;
 }
 
 /* ---- Inspector ------------------------------------------------------ */
@@ -416,4 +437,39 @@
   .gv-canvas-area {
     padding: 1rem;
   }
+}
+
+/* Rules and HTML in text areas read better in a monospace font */
+.gv-inspector textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* Covers the app while an example loads */
+.gv-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--background) 70%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.gv-loading[hidden] {
+  display: none;
+}
+
+.gv-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.25);
+  font-size: 0.875rem;
+  font-weight: 500;
 }

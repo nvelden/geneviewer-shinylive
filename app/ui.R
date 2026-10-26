@@ -21,7 +21,7 @@ sections <- list(
   theme       = list("Theme", "sparkles", "Theme",
                      "Start from a built-in look and set the fonts and colours of the whole chart.", ui_theme("theme")),
   genes       = list("Genes", "layers", "Genes",
-                     "The shape, size and border of the gene markers.", ui_genes("genes")),
+                     "The shape, size and border of the gene markers.", ui_genes("genes", data)),
   colors      = list("Colors", "circle-half-stroke", "Colors",
                      "Gene colours per group, and patterns for black and white figures.", ui_colors("colors")),
   labels      = list("Gene labels", "tag", "Gene labels",
@@ -83,6 +83,7 @@ inspector_panels <- lapply(names(sections), function(key) {
 
 ui <- block_page(
   title = "Gene Cluster Dashboard",
+  favicon = "favicon-32x32.png",
   theme_mode = "light",
   sidebar = block_sidebar(
     title = tags$span(class = "gv-brand", block_icon("chart-bar", color = "primary"), "geneviewer"),
@@ -121,6 +122,8 @@ ui <- block_page(
   ),
   tags$head(
     tags$link(rel = "stylesheet", href = "app.css"),
+    tags$link(rel = "icon", type = "image/png", sizes = "16x16", href = "favicon-16x16.png"),
+    tags$link(rel = "apple-touch-icon", href = "apple-touch-icon.png"),
     # Picking a section, or clicking a part of the chart, opens the settings
     # when they are collapsed
     tags$script(HTML("
@@ -131,6 +134,30 @@ ui <- block_page(
           document.querySelector('#settings .sb-sidebar-toggle').click();
         }
       });
+      // While an example loads, cover the app until the chart of that load
+      // arrives (it carries the load's token), or the chart fails
+      var gvLoading = null;
+      var gvLoaded = function (token) {
+        if (gvLoading !== null && token === gvLoading) {
+          gvLoading = null;
+          document.getElementById('gv-loading').hidden = true;
+        }
+      };
+      Shiny.addCustomMessageHandler('gv-loading', function (message) {
+        gvLoading = message.token;
+        document.getElementById('gv-loading').hidden = false;
+      });
+      Shiny.addCustomMessageHandler('gv-loaded', function (message) {
+        gvLoaded(message.token);
+      });
+      $(document).on('shiny:value', function (event) {
+        if (event.name === 'gcChart' && event.value && event.value.x) {
+          gvLoaded(event.value.x.loadToken);
+        }
+      });
+      $(document).on('shiny:error', function (event) {
+        if (event.name === 'gcChart') gvLoaded(gvLoading);
+      });
       Shiny.addCustomMessageHandler('gv-open-settings', function (message) {
         var page = document.querySelector('.sb-page');
         if (page && page.getAttribute('data-sidebar-right-collapsed') === 'true') {
@@ -140,6 +167,13 @@ ui <- block_page(
     "))
   ),
   block_toaster("toasts"),
+  # Comes back to the server after all settings of an example (see server.R)
+  tags$div(hidden = NA, block_input("gvMarker")),
+  tags$div(
+    id = "gv-loading", class = "gv-loading", hidden = NA, role = "status",
+    tags$div(class = "gv-loading-card", block_spinner(label = "Loading example"),
+             tags$span("Loading example..."))
+  ),
   tags$div(
     class = "gv-workspace",
     tags$div(
@@ -151,13 +185,20 @@ ui <- block_page(
           tags$p(class = "gv-canvas-hint",
                  "Click a part of the chart to edit it. Hover the chart and use the download icon to save it as SVG or PNG.")
         ),
-        block_cluster(
-          gap = "md",
-          block_switch("editMode", "Click to edit", value = TRUE, size = "sm"),
-          uiOutput("dataBadges", inline = TRUE)
-        )
+        block_switch("editMode", "Click to edit", value = TRUE, size = "sm")
       ),
-      tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto"))
+      tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto")),
+      block_accordion(
+        type = "single",
+        collapsible = TRUE,
+        class = "gv-code",
+        block_accordion_item(
+          "code", "R code", icon = "code",
+          tags$p(class = "gv-code-hint",
+                 "The geneviewer code that makes this chart, with the settings you chose."),
+          uiOutput("chartCode")
+        )
+      )
     )
   )
 )
