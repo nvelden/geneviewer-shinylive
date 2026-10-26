@@ -83,6 +83,26 @@ function(input, output, session) {
     )
   }
 
+  # Click to edit: a click on a part of the chart opens its settings
+  click_sections <- list(
+    genes = "genes", transcript = "genes", labels = "labels",
+    coordinates = "coordinates", links = "links", legend = "legend",
+    sequence = "sequence",
+    scale = c("scale", "axis"), scaleBar = c("scale", "scalebar"),
+    clusterTitle = c("titles", "title"), clusterFooter = c("titles", "footer"),
+    clusterLabel = c("titles", "label")
+  )
+  observeEvent(input$gcChart_click, {
+    req(isTRUE(input$editMode))
+    target <- click_sections[[input$gcChart_click$component %||% ""]]
+    req(target)
+    shinyblocks::update_block_nav(session, "section", selected = target[[1]])
+    if (length(target) == 2) {
+      shinyblocks::update_block_tabs(session, paste0(target[[1]], "-tab"), selected = target[[2]])
+    }
+    session$sendCustomMessage("gv-open-settings", TRUE)
+  })
+
   output$dataBadges <- renderUI({
     data <- r$cluster_data
     col <- r$input[["cluster"]]
@@ -167,6 +187,9 @@ function(input, output, session) {
       }
       if (tooltip$trackMouse) {
         chart <- geneviewer::GC_trackMouse(chart)
+      }
+      if (isTRUE(input$editMode)) {
+        chart <- geneviewer::GC_events(chart, highlight = TRUE)
       }
       chart
     })

@@ -121,10 +121,17 @@ ui <- block_page(
   ),
   tags$head(
     tags$link(rel = "stylesheet", href = "app.css"),
-    # Picking a section opens the settings when they are collapsed
+    # Picking a section, or clicking a part of the chart, opens the settings
+    # when they are collapsed
     tags$script(HTML("
       document.addEventListener('click', function (event) {
         if (!event.target.closest('#sb-sidebar .sb-nav-item')) return;
+        var page = document.querySelector('.sb-page');
+        if (page && page.getAttribute('data-sidebar-right-collapsed') === 'true') {
+          document.querySelector('#settings .sb-sidebar-toggle').click();
+        }
+      });
+      Shiny.addCustomMessageHandler('gv-open-settings', function (message) {
         var page = document.querySelector('.sb-page');
         if (page && page.getAttribute('data-sidebar-right-collapsed') === 'true') {
           document.querySelector('#settings .sb-sidebar-toggle').click();
@@ -142,9 +149,13 @@ ui <- block_page(
         tags$div(
           tags$h2(class = "gv-canvas-title", "Preview"),
           tags$p(class = "gv-canvas-hint",
-                 "Hover the chart and use the download icon to save it as SVG or PNG.")
+                 "Click a part of the chart to edit it. Hover the chart and use the download icon to save it as SVG or PNG.")
         ),
-        uiOutput("dataBadges", inline = TRUE)
+        block_cluster(
+          gap = "md",
+          block_switch("editMode", "Click to edit", value = TRUE, size = "sm"),
+          uiOutput("dataBadges", inline = TRUE)
+        )
       ),
       tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto"))
     )
