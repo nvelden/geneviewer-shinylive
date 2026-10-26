@@ -8,7 +8,7 @@ box::use(
   ./views/section_titles[server_titles],
   ./views/section_scale[server_scale, server_coordinates, server_sequence],
   ./views/section_compare[server_links, server_alignment, server_tooltip, server_size],
-  ./logic/utils[make_named_color_list, order_cluster_data],
+  ./logic/utils[make_named_color_list, order_cluster_data, cluster_subtitles],
   ./logic/code_gen[chart_code, data_code],
   ./logic/examples[EXAMPLES],
   ./logic/ui_helpers[INPUT_TYPES, NONE],
@@ -34,7 +34,7 @@ function(input, output, session) {
   color_inputs <- server_colors("colors")
   label_inputs <- server_labels("labels", r = r)
   legend_inputs <- server_legend("legend")
-  title_inputs <- server_titles("titles")
+  title_inputs <- server_titles("titles", r = r)
   scale_inputs <- server_scale("scale")
   coordinate_inputs <- server_coordinates("coordinates")
   sequence_inputs <- server_sequence("sequence")
@@ -49,17 +49,19 @@ function(input, output, session) {
 
   # Run a geneviewer function on the chart and record the call. Arguments
   # come as lists; NULL and empty ones are left out unless keep_null is set.
-  add <- function(chart, name, ..., keep_null = FALSE, record = TRUE) {
+  add <- function(chart, name, ..., keep_null = FALSE, record = TRUE, code_args = NULL) {
     # Run the earlier calls of a pipe first, so the calls are recorded in order
     force(chart)
     safely(chart, function(chart) {
       args <- do.call(c, list(...)) %||% list()
       if (!keep_null) {
-        args <- Filter(function(a) !is.null(a) && !(is.list(a) && length(a) == 0), args)
+        keep <- function(a) !is.null(a) && !(is.list(a) && length(a) == 0)
+        args <- Filter(keep, args)
+        if (!is.null(code_args)) code_args <- Filter(keep, code_args)
       }
       result <- do.call(getExportedValue("geneviewer", name), c(list(chart), args))
       # Failed steps leave both the chart and its generated code unchanged.
-      if (record) calls[[length(calls) + 1]] <<- list(name = name, args = args)
+      if (record) calls[[length(calls) + 1]] <<- list(name = name, args = code_args %||% args)
       result
     })
   }
@@ -129,6 +131,7 @@ function(input, output, session) {
     switch(id,
       "labels-label" = , "links-group" = , "alignment-idColumn" = cols,
       "tooltip-columns" = cols,
+      "titles-label_subtitleColumn" = c("Manual text" = NONE, cols),
       "labels-styleBy" = , "genes-styleBy" = c("Group column" = NONE, cols),
       "data-start" = , "data-end" = , "data-cluster" = , "data-group" = , "data-strand" =
         column_choices(cols),
@@ -216,6 +219,9 @@ function(input, output, session) {
 
     r$pending <- list(token = load_token, targets = targets)
     r$cluster_data <- data
+    r$link_data <- if (is.function(example$links)) example$links() else NULL
+    r$link_code <- example$link_code
+    r$link_name <- if (is.function(example$links)) paste(example$label, "alignment") else NULL
     r$source_files <- NULL
     r$example <- key
     r$source_name <- example$label
@@ -278,6 +284,10 @@ function(input, output, session) {
     labels <- label_inputs()
     legend <- legend_inputs()
     titles <- title_inputs()
+    if (!is.null(titles$label$subtitleColumn)) {
+      titles$label$args$subtitle <- cluster_subtitles(data, r$input[["cluster"]],
+                                                    titles$label$subtitleColumn)
+    }
     scale <- scale_inputs()
     coordinates <- coordinate_inputs()
     sequence <- sequence_inputs()
@@ -359,7 +369,14 @@ function(input, output, session) {
     }
 
     if (links$args$show) {
-      chart <- add(chart, "GC_links", links$args[names(links$args) != "show"], links$style)
+      if (!links$ready) {
+        notify(links$problem)
+      } else {
+        args <- c(links$args[names(links$args) != "show"], links$style)
+        recorded <- args
+        if (links$useAlignment) recorded$data <- quote(alignment)
+        chart <- add(chart, "GC_links", args, code_args = recorded)
+      }
     }
 
     # The code is extra: a problem with it must not stop the chart
@@ -368,7 +385,8 @@ function(input, output, session) {
         files = r$source_files,
         cluster_col = r$input[["cluster"]],
         order = r$input[["select_order"]],
-        example_code = EXAMPLES[[r$example %||% ""]]$code
+        example_code = EXAMPLES[[r$example %||% ""]]$code,
+        link_code = if (links$args$show && links$useAlignment && links$ready) r$link_code
       ), trim = is.null(chart$x$theme)),
       error = function(e) paste("# The code could not be written:", conditionMessage(e))
     ))

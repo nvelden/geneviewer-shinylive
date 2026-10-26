@@ -81,6 +81,18 @@ order_cluster_data <- function(data, cluster_col, order_vec) {
   return(df)
 }
 
+#' One subtitle per visible cluster, in the displayed order
+#' @export
+cluster_subtitles <- function(data, cluster_col, value_col) {
+  if (is.null(value_col) || !value_col %in% names(data)) return(NULL)
+  groups <- if (is.null(cluster_col)) rep("all", nrow(data)) else as.character(data[[cluster_col]])
+  vapply(unique(groups), function(group) {
+    values <- as.character(data[[value_col]][!is.na(groups) & groups == group])
+    values <- values[!is.na(values)]
+    if (length(values)) values[1] else ""
+  }, character(1), USE.NAMES = FALSE)
+}
+
 #' A number from a number input, or NULL when it is empty
 #' @export
 num <- function(x) {

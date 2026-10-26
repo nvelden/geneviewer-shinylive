@@ -72,7 +72,6 @@ EXAMPLES <- list(
       "data$start[data$gene == \"L\"] <- data$start[data$gene == \"L\"] - 100"
     ),
     inputs = function(data) {
-      strains <- unique(data[, c("cluster", "strain_short")])$strain_short
       gene_names <- c("tnsA", "tnsB", "tnsC", "tniQ / tnsD", "tnsE", "cas8f / cas5f",
                       "cas7f", "cas6f", "cas5")
       list(
@@ -104,7 +103,7 @@ EXAMPLES <- list(
           "SRP-RNA: y = 55, dy = 0px, textAnchor = end, x = -4",
           sep = "\n"
         ),
-        `titles-label_show` = TRUE, `titles-label_subtitle` = paste(strains, collapse = ", "),
+        `titles-label_show` = TRUE, `titles-label_subtitleColumn` = "strain_short",
         `titles-label_width` = "190px", `titles-label_fontSize` = 12,
         `titles-label_subSize` = 10, `titles-label_subStyle` = "italic",
         `titles-label_align` = "right", `titles-label_x` = -10,
@@ -117,6 +116,46 @@ EXAMPLES <- list(
         `legend-align` = "center", `legend-order` = join_names(names(TN7_COLORS)),
         `legend-fontSize` = 12,
         `legend-groupStyle` = paste0(join_names(gene_names), ": fontStyle = italic"),
+        `theme-theme` = "publication"
+      )
+    }
+  ),
+
+  pqeb1 = list(
+    label = "pQEB1 plasmids and rearranged variants",
+    data = function() geneviewer::pQEB1_plasmids,
+    links = function() geneviewer::pQEB1_alignment,
+    link_code = quote(pQEB1_alignment),
+    code = "# Five related IncN plasmids, data of geneviewer\ndata <- pQEB1_plasmids",
+    inputs = function(data) {
+      colors <- c(
+        "Carbapenemase (KPC)" = "#d62728", "Other resistance" = "#ff7f0e",
+        "Arsenic resistance" = "#8c564b", "Mobile element" = "#9467bd",
+        "Conjugation" = "#1f77b4", "Replication & maintenance" = "#2ca02c",
+        "Hypothetical" = "#d9d9d9", "Other" = "#9e9e9e"
+      )
+      list(
+        `data-start` = "start", `data-end` = "end", `data-cluster` = "cluster",
+        `data-group` = "category", `data-strand` = "strand",
+        `size-height` = 520, `size-bottom` = 20,
+        `genes-markerSize` = "small", `scale-axisType` = "range", `scale-show` = TRUE,
+        `colors-customColors` = paste(names(colors), "=", colors, collapse = ", "),
+        `links-show` = TRUE, `links-source` = "alignment", `links-measure` = "none",
+        `links-label` = FALSE, `links-colorBar` = "hide",
+        `links-normalColor` = "#7f9cbf", `links-invertedColor` = "#e6894e",
+        `titles-label_show` = TRUE, `titles-label_subtitleColumn` = "host",
+        `titles-label_width` = "175px", `titles-label_fontSize` = 13,
+        `titles-label_subSize` = 12, `titles-label_subStyle` = "italic",
+        `titles-label_align` = "right", `titles-label_x` = -10,
+        `titles-chart_show` = TRUE,
+        `titles-chart_title` = "<i>bla</i>KPC-2 plasmid pQEB1 and its rearranged variants",
+        `titles-chart_subtitle` = "IncN plasmids aligned with nucmer (all blocks \u2265 99.2% identity); orange links mark inversions",
+        `titles-chart_height` = "50px", `titles-chart_t_fontSize` = 18,
+        `titles-chart_t_fontWeight` = "bold", `titles-chart_s_fontSize` = 13,
+        `titles-chart_s_fontStyle` = "italic",
+        `tooltip-formatter` = "<b>{gene}</b> {product}<br>{start} - {end}",
+        `legend-position` = "top", `legend-align` = "center",
+        `legend-order` = join_names(names(colors)), `legend-fontSize` = 10,
         `theme-theme` = "publication"
       )
     }

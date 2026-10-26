@@ -2,43 +2,68 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags],
-  shinyblocks[block_combobox, update_block_select, update_block_combobox],
+  shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags,
+        conditionalPanel, uiOutput, renderUI],
+  shinyblocks[block_combobox, update_block_select, update_block_combobox,
+              block_file_input, update_block_file_input, show_toast],
   ../logic/ui_helpers[field, text_field, num_field, select_field, switch_field,
                       textarea_field, field_group, sections, when_on, register_input,
-                      ALIGNMENTS],
-  ../logic/utils[num, txt, compact, parse_delimited_input, pick_choice]
+                      ALIGNMENTS, NONE],
+  ../logic/utils[num, txt, compact, parse_delimited_input, pick_choice],
+  ../logic/alignment_data[validate_alignment]
 )
 
 #' @export
 ui_links <- function(id, data) {
   ns <- NS(id)
+  matching <- function(...) conditionalPanel(
+    sprintf("input['%s'] !== 'alignment'", ns("source")), ...)
+  alignment <- function(...) conditionalPanel(
+    sprintf("input['%s'] === 'alignment'", ns("source")), ...)
   sections(
     field_group(
       NULL,
-      switch_field(ns("show"), "Link genes between clusters"),
+      switch_field(ns("show"), "Link regions between clusters"),
       when_on(ns, "show",
-        select_field(ns("group"), "Match on", names(data), "class",
-                     description = "Genes with the same value in this column are linked."),
-        text_field(ns("value1"), "Values (first)", placeholder = "gene1, gene2, ...", stacked = TRUE),
-        text_field(ns("value2"), "Values (second)", placeholder = "gene3, gene4, ...", stacked = TRUE)
+        select_field(ns("source"), "Link source",
+                     c("Matching gene values" = "matching", "Alignment blocks" = "alignment"), "matching"),
+        matching(
+          select_field(ns("group"), "Match on", names(data), "class",
+                       description = "Genes with the same value in this column are linked."),
+          text_field(ns("value1"), "Values (first)", placeholder = "gene1, gene2, ...", stacked = TRUE),
+          text_field(ns("value2"), "Values (second)", placeholder = "gene3, gene4, ...", stacked = TRUE)
+        ),
+        alignment(
+          uiOutput(ns("alignmentSummary")),
+          block_file_input(ns("alignmentFile"), accept = ".csv", multiple = FALSE),
+          tags$p(class = "gv-switch-description",
+                 "CSV columns: cluster1, start1, end1, cluster2, start2, end2. Optional identity or similarity (%). Keep start > end for inverted blocks.")
+        )
       )
     ),
     when_on(ns, "show",
       field_group(
+        "Measure",
+        select_field(ns("measure"), "Color by",
+                     c("Identity (%)" = "identity", "Similarity (%)" = "similarity", "Strand only" = "none"), "identity"),
+        matching(switch_field(ns("label"), "Show measure labels", TRUE)),
+        select_field(ns("colorBar"), "Color bar", c("Show" = "show", "Hide" = "hide"),
+                     default = "show")
+      ),
+      field_group(
         "Colors",
-        switch_field(ns("useGroupColors"), "Use the gene colors"),
+        matching(switch_field(ns("useGroupColors"), "Use the gene colors")),
         text_field(ns("normalColor"), "Same strand", default = "#969696"),
         text_field(ns("invertedColor"), "Opposite strand", default = "#d62728"),
-        text_field(ns("lowColor"), "Lowest identity", default = "white"),
-        num_field(ns("vmin"), "Min identity (%)", min = 0, max = 100, step = 1, default = 0),
-        num_field(ns("vmax"), "Max identity (%)", min = 0, max = 100, step = 1, default = 100)
+        text_field(ns("lowColor"), "Lowest measure", default = "white"),
+        num_field(ns("vmin"), "Min measure (%)", min = 0, max = 100, step = 1, default = 0),
+        num_field(ns("vmax"), "Max measure (%)", min = 0, max = 100, step = 1, default = 100)
       ),
       field_group(
         "Shape",
         switch_field(ns("curve"), "Curved links", TRUE),
         num_field(ns("linkWidth"), "Width", min = 0, max = 1, step = 0.1, default = 1,
-                  description = "Share of the gene length, from 0 to 1."),
+                  description = "Share of the region length, from 0 to 1."),
         num_field(ns("opacity"), "Opacity", min = 0, max = 1, step = 0.1, default = 0.8),
         text_field(ns("stroke"), "Border color", default = "none"),
         num_field(ns("strokeWidth"), "Border width", min = 0, step = 0.1, default = 1)
@@ -50,36 +75,80 @@ ui_links <- function(id, data) {
 #' @export
 server_links <- function(id, r) {
   moduleServer(id, function(input, output, session) {
-    # Only when the data changes: reading the selection here would make the
-    # update of the picker trigger this observer again
     observeEvent(r$cluster_data, isolate({
       req(r$cluster_data)
       cols <- names(r$cluster_data)
       update_block_select(session, "group", choices = cols,
                           selected = pick_choice(r, session$ns("group"), input$group, cols, cols[1]))
+      update_block_file_input(session, "alignmentFile", reset = TRUE)
     }))
+    output$alignmentSummary <- renderUI({
+      if (is.null(r$link_data)) tags$p("No alignment loaded.") else {
+        tags$p(sprintf("%d blocks: %s", nrow(r$link_data), r$link_name))
+      }
+    })
+    observeEvent(input$alignmentFile, {
+      if (is.null(input$alignmentFile)) {
+        # A manual clear removes uploaded data, but a reset while loading a
+        # preset must not remove its built-in alignment.
+        if (is.call(r$link_code)) {
+          r$link_data <- NULL
+          r$link_code <- NULL
+          r$link_name <- NULL
+        }
+        return()
+      }
+      tryCatch({
+        data <- utils::read.csv(input$alignmentFile$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+        data <- validate_alignment(data)
+        r$link_data <- data
+        r$link_name <- input$alignmentFile$name
+        r$link_code <- call("read.csv", input$alignmentFile$name, stringsAsFactors = FALSE)
+      }, error = function(e) {
+        show_toast(session = session$rootScope(), toaster_id = "toasts",
+                   title = "Could not load the alignment", description = conditionMessage(e),
+                   variant = "destructive", icon = "alert-circle", duration = 8000)
+      })
+    }, ignoreInit = TRUE, ignoreNULL = FALSE)
     reactive({
+      external <- identical(input$source, "alignment")
+      measure <- input$measure %||% "identity"
+      problem <- if (external && is.null(r$link_data)) {
+        "Upload an alignment CSV, or choose matching gene values."
+      } else if (external && measure != "none" && !measure %in% names(r$link_data)) {
+        paste("The alignment has no", measure, "column. Choose Strand only or upload that measure.")
+      }
+      if (external && is.null(problem)) {
+        cluster_col <- r$input[["cluster"]]
+        known <- if (!is.null(cluster_col) && cluster_col %in% names(r$cluster_data)) {
+          unique(as.character(r$cluster_data[[cluster_col]]))
+        } else "cluster"
+        unknown <- setdiff(unique(c(r$link_data$cluster1, r$link_data$cluster2)), known)
+        if (length(unknown)) problem <- paste("Alignment cluster names do not match the gene data:",
+                                             paste(unknown, collapse = ", "))
+      }
       list(
+        useAlignment = external,
+        ready = is.null(problem), problem = problem,
         args = compact(list(
           show = isTRUE(input$show),
-          group = input$group,
-          value1 = parse_delimited_input(txt(input$value1)),
-          value2 = parse_delimited_input(txt(input$value2))
+          group = if (!external) input$group,
+          data = if (external) r$link_data,
+          measure = measure,
+          label = !external && isTRUE(input$label),
+          value1 = if (!external) parse_delimited_input(txt(input$value1)),
+          value2 = if (!external) parse_delimited_input(txt(input$value2))
         )),
         style = compact(list(
-          use_group_colors = isTRUE(input$useGroupColors),
+          use_group_colors = !external && isTRUE(input$useGroupColors),
+          color_bar = switch(input$colorBar %||% NONE, show = TRUE, hide = FALSE, NULL),
           normal_color = txt(input$normalColor),
           inverted_color = txt(input$invertedColor),
           low_color = txt(input$lowColor),
-          vmin = num(input$vmin),
-          vmax = num(input$vmax),
-          curve = isTRUE(input$curve),
-          linkWidth = num(input$linkWidth),
-          linkStyle = compact(list(
-            stroke = txt(input$stroke),
-            strokeWidth = num(input$strokeWidth),
-            fillOpacity = num(input$opacity)
-          ))
+          vmin = num(input$vmin), vmax = num(input$vmax),
+          curve = isTRUE(input$curve), linkWidth = num(input$linkWidth),
+          linkStyle = compact(list(stroke = txt(input$stroke),
+                                   strokeWidth = num(input$strokeWidth), fillOpacity = num(input$opacity)))
         ))
       )
     })

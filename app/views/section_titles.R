@@ -5,11 +5,11 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, tags],
-  shinyblocks[block_tabs, block_tab],
+  shiny[NS, moduleServer, reactive, observeEvent, req, tags, conditionalPanel],
+  shinyblocks[block_tabs, block_tab, update_block_select],
   ../logic/ui_helpers[text_field, num_field, select_field, switch_field,
-                      field_group, sections, when_on, ALIGNMENTS, FONT_STYLES],
-  ../logic/utils[num, txt, opt, px, compact, parse_delimited_input],
+                      field_group, sections, when_on, ALIGNMENTS, FONT_STYLES, NONE],
+  ../logic/utils[num, txt, opt, px, compact, parse_delimited_input, pick_choice],
   ./section_labels[font_fields, font_values]
 )
 
@@ -65,7 +65,7 @@ heading_values <- function(input, prefix) {
 }
 
 #' @export
-ui_titles <- function(id) {
+ui_titles <- function(id, data) {
   ns <- NS(id)
   block_tabs(
     id = ns("tab"),
@@ -110,8 +110,12 @@ ui_titles <- function(id) {
           when_on(ns, "label_show",
             text_field(ns("label_title"), "Text", placeholder = "Label 1, Label 2, ...",
                        description = "Empty uses the cluster names.", stacked = TRUE),
-            text_field(ns("label_subtitle"), "Subtitle", placeholder = "Species 1, Species 2, ...",
-                       stacked = TRUE)
+            select_field(ns("label_subtitleColumn"), "Subtitle from column",
+                         c("Manual text" = NONE, names(data)), NONE,
+                         description = "Uses the first value per cluster; follows filtering and ordering."),
+            conditionalPanel(sprintf("input['%s'] === '%s'", ns("label_subtitleColumn"), NONE),
+              text_field(ns("label_subtitle"), "Manual subtitle", placeholder = "Species 1, Species 2, ...",
+                         stacked = TRUE))
           )
         ),
         when_on(ns, "label_show",
@@ -139,8 +143,14 @@ ui_titles <- function(id) {
 }
 
 #' @export
-server_titles <- function(id) {
+server_titles <- function(id, r) {
   moduleServer(id, function(input, output, session) {
+    observeEvent(r$cluster_data, {
+      cols <- names(r$cluster_data)
+      update_block_select(session, "label_subtitleColumn", choices = c("Manual text" = NONE, cols),
+                          selected = pick_choice(r, session$ns("label_subtitleColumn"),
+                                                 input$label_subtitleColumn, c(NONE, cols), NONE))
+    })
     reactive({
       list(
         chart = list(
@@ -159,6 +169,7 @@ server_titles <- function(id) {
         title = heading_values(input, "title_"),
         footer = heading_values(input, "footer_"),
         label = list(
+          subtitleColumn = opt(input$label_subtitleColumn),
           args = compact(list(
             show = isTRUE(input$label_show),
             title = parse_delimited_input(txt(input$label_title)),

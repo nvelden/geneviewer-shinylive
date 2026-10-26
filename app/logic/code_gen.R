@@ -151,7 +151,7 @@ format_call <- function(name, args, indent = 0, first = NULL) {
 #' @param order The clusters to show, in order, or NULL for all
 #' @param example_code The code that makes the data of an example
 #' @export
-data_code <- function(files, cluster_col = NULL, order = NULL, example_code = NULL) {
+data_code <- function(files, cluster_col = NULL, order = NULL, example_code = NULL, link_code = NULL) {
   if (is.null(files)) {
     code <- example_code %||% "# The example data of geneviewer\ndata <- ophA_clusters"
   } else {
@@ -189,6 +189,9 @@ data_code <- function(files, cluster_col = NULL, order = NULL, example_code = NU
       "data[[", col, "]] <- factor(data[[", col, "]], levels = ", clusters, ")\n",
       "data <- data[order(data[[", col, "]]), ]"
     )
+  }
+  if (!is.null(link_code)) {
+    code <- paste0(code, "\n\n# Alignment blocks\nalignment <- ", r_value(link_code))
   }
   code
 }

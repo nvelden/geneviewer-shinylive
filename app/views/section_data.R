@@ -7,7 +7,7 @@
 box::use(
   shiny[NS, moduleServer, reactive, observeEvent, req, tags, uiOutput, renderUI],
   shinyblocks[block_file_input, block_combobox, update_block_select,
-              update_block_combobox, block_icon, show_toast],
+              update_block_combobox, update_block_file_input, block_icon, show_toast],
   ../logic/logic_load_controls[set_inputs_from_columns, load_gene_data],
   ../logic/ui_helpers[field, select_field, field_group, register_input, NONE],
   ../logic/utils[opt],
@@ -78,6 +78,7 @@ server_data <- function(id, r, toaster_id) {
     observeEvent(r$example, {
       update_block_select(session, "example", choices = example_choices(r$example),
                           selected = NULL)
+      if (!identical(r$example, "upload")) update_block_file_input(session, "files", reset = TRUE)
     }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
     update_cluster_choices <- function() {
@@ -118,6 +119,9 @@ server_data <- function(id, r, toaster_id) {
       tryCatch({
         data <- load_gene_data(input$files)
         r$cluster_data <- data
+        r$link_data <- NULL
+        r$link_code <- NULL
+        r$link_name <- NULL
         r$source_files <- input$files$name
         r$example <- "upload"
         r$source_name <- if (nrow(input$files) == 1) {
