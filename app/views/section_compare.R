@@ -195,7 +195,7 @@ ui_size <- function(id) {
     field_group(
       "Chart",
       num_field(ns("width"), "Width (px)", min = 100, step = 10,
-                description = "Empty fills the preview."),
+                description = "Empty fills the preview. Wider charts scroll horizontally."),
       num_field(ns("height"), "Height (px)", 400, min = 100, step = 10)
     ),
     field_group(

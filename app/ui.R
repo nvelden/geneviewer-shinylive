@@ -152,6 +152,11 @@ ui <- block_page(
       });
       $(document).on('shiny:value', function (event) {
         if (event.name === 'gcChart' && event.value && event.value.x) {
+          // Size the whole widget before it draws: title, genes and legend
+          // must share the requested width. The canvas scrolls wider charts.
+          var chart = document.getElementById('gcChart');
+          var width = event.value.x.params && event.value.x.params.width;
+          chart.style.width = typeof width === 'number' ? width + 'px' : (width || '100%');
           gvLoaded(event.value.x.loadToken);
         }
       });
