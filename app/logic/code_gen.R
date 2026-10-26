@@ -35,7 +35,9 @@ JS_DEFAULTS <- list(
   GC_labels = list(fontSize = "12px", fontStyle = "italic", fontFamily = "sans-serif",
                    adjustLabels = TRUE),
   GC_scale = list(
-    padding = 2, axis_position = "bottom", ticksCount = 10, ticksFormat = ",.0f",
+    # Keep explicit tick formats: a range axis defaults to ".2s", while a
+    # position axis defaults to ",.0f".
+    padding = 2, axis_position = "bottom", ticksCount = 10,
     tickStyle = list(stroke = "grey", strokeWidth = 1, lineLength = 6),
     textStyle = list(fill = "black", fontSize = "10px", fontFamily = "Arial"),
     lineStyle = list(stroke = "grey", strokeWidth = 1)

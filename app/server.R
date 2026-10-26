@@ -52,12 +52,16 @@ function(input, output, session) {
   add <- function(chart, name, ..., keep_null = FALSE, record = TRUE) {
     # Run the earlier calls of a pipe first, so the calls are recorded in order
     force(chart)
-    args <- do.call(c, list(...)) %||% list()
-    if (!keep_null) {
-      args <- Filter(function(a) !is.null(a) && !(is.list(a) && length(a) == 0), args)
-    }
-    if (record) calls[[length(calls) + 1]] <<- list(name = name, args = args)
-    do.call(getExportedValue("geneviewer", name), c(list(chart), args))
+    safely(chart, function(chart) {
+      args <- do.call(c, list(...)) %||% list()
+      if (!keep_null) {
+        args <- Filter(function(a) !is.null(a) && !(is.list(a) && length(a) == 0), args)
+      }
+      result <- do.call(getExportedValue("geneviewer", name), c(list(chart), args))
+      # Failed steps leave both the chart and its generated code unchanged.
+      if (record) calls[[length(calls) + 1]] <<- list(name = name, args = args)
+      result
+    })
   }
 
   # Components switched off do nothing; leave them out of the code
@@ -299,9 +303,7 @@ function(input, output, session) {
       lapply(size$margin[names(default_margin)], as.numeric), default_margin
     ))
     chart <- safely(NULL, function(chart) {
-      chart <- do.call(geneviewer::GC_chart, c(list(data), chart_args))
-      if (margin_changed) chart <- add(chart, "GC_grid", list(margin = size$margin))
-      chart
+      do.call(geneviewer::GC_chart, c(list(data), chart_args))
     })
     if (is.null(chart)) {
       # No chart: tell the browser the load is over, so it lifts the cover
@@ -309,60 +311,54 @@ function(input, output, session) {
       req(FALSE)
     }
 
-    chart <- safely(chart, function(chart) {
-      if (theme$active) {
-        chart <- add(chart, "GC_theme", theme$settings)
-      }
+    if (margin_changed) chart <- add(chart, "GC_grid", list(margin = size$margin))
 
-      color_scheme <- colors$style$colorScheme
-      # Colours of named groups, or a list of colours for all groups in order
-      custom_colors <- colors$namedColors %||% if (!is.null(group) && group %in% names(data)) {
-        make_named_color_list(data, group, colors$customColors)
-      }
+    if (theme$active) {
+      chart <- add(chart, "GC_theme", theme$settings)
+    }
 
-      chart <- chart |>
-        add_shown("GC_title", c(titles$chart$args, titles$chart$style)) |>
-        add("GC_genes", list(group = group), genes$args, genes$style) |>
-        add_shown("GC_labels", c(labels$args, labels$style)) |>
-        add("GC_scale", scale$args, scale$style) |>
-        add_shown("GC_scaleBar", c(scale$bar$args, scale$bar$style)) |>
-        add_shown("GC_clusterTitle", c(titles$title$args, titles$title$style)) |>
-        add_shown("GC_clusterFooter", c(titles$footer$args, titles$footer$style)) |>
-        add_shown("GC_clusterLabel", c(titles$label$args, titles$label$style)) |>
-        add("GC_legend", list(group = group), legend$args, legend$style) |>
-        add_shown("GC_coordinates", c(coordinates$args, coordinates$style)) |>
-        add("GC_sequence", sequence$args, sequence$style) |>
-        add("GC_color",
-            list(colorScheme = if (is.null(colors$customColors)) color_scheme,
-                 customColors = custom_colors)) |>
-        add("GC_tooltip", tooltip$args)
+    color_scheme <- colors$style$colorScheme
+    # Colours of named groups, or a list of colours for all groups in order
+    custom_colors <- colors$namedColors %||% if (!is.null(group) && group %in% names(data)) {
+      make_named_color_list(data, group, colors$customColors)
+    }
 
-      if (colors$patterns$show) {
-        # background = NULL draws the patterns on top of the gene colours
-        chart <- add(chart, "GC_pattern", colors$patterns$args, keep_null = TRUE)
-      }
-      if (tooltip$trackMouse) {
-        chart <- add(chart, "GC_trackMouse")
-      }
-      # Click to edit is for the app only, so not part of the code
-      if (isTRUE(input$editMode)) {
-        chart <- add(chart, "GC_events", list(highlight = TRUE), record = FALSE)
-      }
-      chart
-    })
+    chart <- chart |>
+      add_shown("GC_title", c(titles$chart$args, titles$chart$style)) |>
+      add("GC_genes", list(group = group), genes$args, genes$style) |>
+      add_shown("GC_labels", c(labels$args, labels$style)) |>
+      add("GC_scale", scale$args, scale$style) |>
+      add_shown("GC_scaleBar", c(scale$bar$args, scale$bar$style)) |>
+      add_shown("GC_clusterTitle", c(titles$title$args, titles$title$style)) |>
+      add_shown("GC_clusterFooter", c(titles$footer$args, titles$footer$style)) |>
+      add_shown("GC_clusterLabel", c(titles$label$args, titles$label$style)) |>
+      add("GC_legend", list(group = group), legend$args, legend$style) |>
+      add_shown("GC_coordinates", c(coordinates$args, coordinates$style)) |>
+      add("GC_sequence", sequence$args, sequence$style) |>
+      add("GC_color",
+          list(colorScheme = if (is.null(colors$customColors)) color_scheme,
+               customColors = custom_colors)) |>
+      add("GC_tooltip", tooltip$args)
+
+    if (colors$patterns$show) {
+      # background = NULL draws the patterns on top of the gene colours
+      chart <- add(chart, "GC_pattern", colors$patterns$args, keep_null = TRUE)
+    }
+    if (tooltip$trackMouse) {
+      chart <- add(chart, "GC_trackMouse")
+    }
+    # Click to edit is for the app only, so not part of the code
+    if (isTRUE(input$editMode)) {
+      chart <- add(chart, "GC_events", list(highlight = TRUE), record = FALSE)
+    }
 
     if (alignment$align && !is.null(alignment$id)) {
-      chart <- safely(chart, function(chart) {
-        add(chart, "GC_align", list(id_column = alignment$id_column, id = alignment$id,
-                                    align = alignment$position))
-      })
+      chart <- add(chart, "GC_align", list(id_column = alignment$id_column, id = alignment$id,
+                                          align = alignment$position))
     }
 
     if (links$args$show) {
-      chart <- safely(chart, function(chart) {
-        add(chart, "GC_links", links$args[names(links$args) != "show"],
-            links$style)
-      })
+      chart <- add(chart, "GC_links", links$args[names(links$args) != "show"], links$style)
     }
 
     # The code is extra: a problem with it must not stop the chart
@@ -372,7 +368,7 @@ function(input, output, session) {
         cluster_col = r$input[["cluster"]],
         order = r$input[["select_order"]],
         example_code = EXAMPLES[[r$example %||% ""]]$code
-      ), trim = !theme$active),
+      ), trim = is.null(chart$x$theme)),
       error = function(e) paste("# The code could not be written:", conditionMessage(e))
     ))
     # The browser lifts the loading cover when the chart of its load arrives
