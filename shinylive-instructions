@@ -1,0 +1,9 @@
+# Step 1 Install shinylive
+install.packages("shinylive")
+# Step 2
+shinylive::export("app", "site")
+
+# See : https://posit-dev.github.io/r-shinylive/ for instructions
+
+# Host the local directory
+httpuv::runStaticServer("local/shiny-apps-out/")
