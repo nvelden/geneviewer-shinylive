@@ -195,7 +195,7 @@ function(input, output, session) {
   # 2. all settings are updated, then a marker; the browser handles updates in
   #    order, so the marker comes back after all the settings;
   # 3. when the marker comes back the chart is drawn, with the load's token,
-  #    and the browser lifts the loading cover when that chart arrives.
+  #    and the browser lifts the cover on its native rendered event.
   load_token <- 0
   observeEvent(input[["data-example"]], {
     key <- input[["data-example"]]
@@ -347,10 +347,11 @@ function(input, output, session) {
     if (tooltip$trackMouse) {
       chart <- add(chart, "GC_trackMouse")
     }
-    # Click to edit is for the app only, so not part of the code
-    if (isTRUE(input$editMode)) {
-      chart <- add(chart, "GC_events", list(highlight = TRUE), record = FALSE)
-    }
+    # App interaction and loading events are not part of the exported code.
+    chart <- add(chart, "GC_events", list(
+      click = isTRUE(input$editMode), highlight = isTRUE(input$editMode),
+      rendered = TRUE, render_id = load_token
+    ), record = FALSE)
 
     if (alignment$align && !is.null(alignment$id)) {
       chart <- add(chart, "GC_align", list(id_column = alignment$id_column, id = alignment$id,
@@ -371,8 +372,6 @@ function(input, output, session) {
       ), trim = is.null(chart$x$theme)),
       error = function(e) paste("# The code could not be written:", conditionMessage(e))
     ))
-    # The browser lifts the loading cover when the chart of its load arrives
-    chart$x$loadToken <- load_token
     chart
   })
 

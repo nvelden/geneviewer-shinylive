@@ -135,7 +135,7 @@ ui <- block_page(
         }
       });
       // While an example loads, cover the app until the chart of that load
-      // arrives (it carries the load's token), or the chart fails
+      // finishes drawing, or the chart fails
       var gvLoading = null;
       var gvLoaded = function (token) {
         if (gvLoading !== null && token === gvLoading) {
@@ -150,10 +150,8 @@ ui <- block_page(
       Shiny.addCustomMessageHandler('gv-loaded', function (message) {
         gvLoaded(message.token);
       });
-      $(document).on('shiny:value', function (event) {
-        if (event.name === 'gcChart' && event.value && event.value.x) {
-          gvLoaded(event.value.x.loadToken);
-        }
+      document.addEventListener('geneviewer:rendered', function (event) {
+        if (event.target.id === 'gcChart') gvLoaded(event.detail.id);
       });
       $(document).on('shiny:error', function (event) {
         if (event.name === 'gcChart') gvLoaded(gvLoading);
