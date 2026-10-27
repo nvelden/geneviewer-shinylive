@@ -2,10 +2,11 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, tags],
-  shinyblocks[block_tabs, block_tab],
+  shiny[NS, moduleServer, reactive, tags, uiOutput, renderUI, observeEvent],
+  shinyblocks[block_tabs, block_tab, update_block_switch],
   ../logic/ui_helpers[text_field, num_field, select_field, switch_field, field_row,
                       field_group, sections, when_on, FONT_FAMILIES, TICK_FORMATS],
+  ../logic/setup[setup_notice, setup_action],
   ../logic/utils[num, txt, opt, px, compact]
 )
 
@@ -51,6 +52,7 @@ ui_scale <- function(id) {
         field_group(
           NULL,
           switch_field(ns("show"), "Show axis"),
+          uiOutput(ns("axisSetup")),
           switch_field(ns("reverse"), "Reverse the scale")
         ),
         field_group(
@@ -90,6 +92,7 @@ ui_scale <- function(id) {
         field_group(
           NULL,
           switch_field(ns("bar_show"), "Show scale bar"),
+          uiOutput(ns("barSetup")),
           when_on(ns, "bar_show",
             text_field(ns("bar_title"), "Label", default = "1 kb"),
             num_field(ns("bar_unit"), "Length (bp)", min = 1, step = 100, default = 1000)
@@ -116,6 +119,20 @@ ui_scale <- function(id) {
 #' @export
 server_scale <- function(id) {
   moduleServer(id, function(input, output, session) {
+    output$axisSetup <- renderUI({
+      if (!isTRUE(input$show)) setup_notice(
+        "The position axis is hidden",
+        "Turn on the axis to see positions and tick marks on each cluster.",
+        setup_action(session$ns("enableAxis"), "Show axis"))
+    })
+    output$barSetup <- renderUI({
+      if (!isTRUE(input$bar_show)) setup_notice(
+        "The scale bar is hidden",
+        "Show a reference length, such as 1 kb, below the chart.",
+        setup_action(session$ns("enableBar"), "Show scale bar"))
+    })
+    observeEvent(input$enableAxis, update_block_switch(session, "show", checked = TRUE))
+    observeEvent(input$enableBar, update_block_switch(session, "bar_show", checked = TRUE))
     reactive({
       padding <- num(input$breakPadding)
       if (!is.null(padding) && identical(input$breakPaddingUnit, "bp")) {

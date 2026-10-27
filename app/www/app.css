@@ -473,3 +473,40 @@
   font-size: 0.875rem;
   font-weight: 500;
 }
+
+/* Keep legend settings in place while explaining the required group mapping. */
+.gv-legend-formatting {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.gv-legend-formatting[disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.gv-setup-notice {
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.gv-setup-notice p {
+  margin: 0.375rem 0 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.gv-group-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.gv-setup-notice .gv-button-outline {
+  margin-top: 0.375rem;
+}

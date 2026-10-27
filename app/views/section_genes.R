@@ -9,6 +9,7 @@ box::use(
   ../logic/ui_helpers[field, select_field, num_field, text_field, switch_field,
                       field_group, sections, when_on, register_input, group_style_fields,
                       NONE],
+  ../logic/setup[ui_group_picker],
   ../logic/utils[num, txt, opt, compact, parse_delimited_input, parse_named_colors,
                  parse_group_styles, split_unquoted, pick_choice]
 )
@@ -113,9 +114,10 @@ PALETTES <- c(
 )
 
 #' @export
-ui_colors <- function(id) {
+ui_colors <- function(id, data) {
   ns <- NS(id)
   sections(
+    field_group("Colour groups", ui_group_picker(id, data)),
     field_group(
       "Palette",
       select_field(ns("colorScheme"), "Palette", PALETTES, default = "schemeCategory10"),

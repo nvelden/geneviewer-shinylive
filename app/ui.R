@@ -23,11 +23,11 @@ sections <- list(
   genes       = list("Genes", "layers", "Genes",
                      "The shape, size and border of the gene markers.", ui_genes("genes", data)),
   colors      = list("Colors", "circle-half-stroke", "Colors",
-                     "Gene colours per group, and patterns for black and white figures.", ui_colors("colors")),
+                     "Gene colours per group, and patterns for black and white figures.", ui_colors("colors", data)),
   labels      = list("Gene labels", "tag", "Gene labels",
                      "Text on or above each gene.", ui_labels("labels", data)),
   legend      = list("Legend", "list", "Legend",
-                     "The key to the gene colours.", ui_legend("legend")),
+                     "The key to the gene colours.", ui_legend("legend", data)),
   titles      = list("Titles", "file-text", "Titles",
                      "Titles, footers and labels of the clusters.", ui_titles("titles", data)),
   scale       = list("Scale", "chart-line", "Scale",
@@ -121,7 +121,7 @@ ui <- block_page(
     )
   ),
   tags$head(
-    tags$link(rel = "stylesheet", href = "app.css"),
+    tags$link(rel = "stylesheet", href = "app.css?v=20261027-inline-fields"),
     tags$link(rel = "icon", type = "image/png", sizes = "16x16", href = "favicon-16x16.png"),
     tags$link(rel = "apple-touch-icon", href = "apple-touch-icon.png"),
     # Picking a section, or clicking a part of the chart, opens the settings
@@ -132,6 +132,14 @@ ui <- block_page(
         var page = document.querySelector('.sb-page');
         if (page && page.getAttribute('data-sidebar-right-collapsed') === 'true') {
           document.querySelector('#settings .sb-sidebar-toggle').click();
+        }
+      });
+      // Colour pickers edit the same data mapping. Silent server updates do
+      // not dispatch change, so only user choices reach this event input.
+      document.addEventListener('change', function (event) {
+        var target = event.target;
+        if (target.tagName === 'SELECT' && target.closest('.gv-group-picker')) {
+          Shiny.setInputValue('groupSetup-choice', {column: target.value}, {priority: 'event'});
         }
       });
       // While an example loads, cover the app until the chart of that load
@@ -156,10 +164,28 @@ ui <- block_page(
       $(document).on('shiny:error', function (event) {
         if (event.name === 'gcChart') gvLoaded(gvLoading);
       });
+      Shiny.addCustomMessageHandler('gv-legend-availability', function (message) {
+        var formatting = document.getElementById(message.formatting);
+        if (formatting) {
+          formatting.disabled = !message.available;
+          formatting.inert = !message.available;
+          formatting.setAttribute('aria-disabled', String(!message.available));
+        }
+      });
       Shiny.addCustomMessageHandler('gv-open-settings', function (message) {
         var page = document.querySelector('.sb-page');
         if (page && page.getAttribute('data-sidebar-right-collapsed') === 'true') {
           document.querySelector('#settings .sb-sidebar-toggle').click();
+        }
+        if (message && message.focus) {
+          requestAnimationFrame(function () {
+            var mount = document.querySelector('[data-sb-input-id=\"' + message.focus + '\"]');
+            var control = mount && mount.querySelector('button, [role=\"combobox\"]');
+            if (control) {
+              control.scrollIntoView({block: 'center'});
+              control.focus();
+            }
+          });
         }
       });
     "))

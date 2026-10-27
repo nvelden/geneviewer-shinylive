@@ -8,6 +8,7 @@ box::use(
   ./views/section_titles[server_titles],
   ./views/section_scale[server_scale, server_coordinates, server_sequence],
   ./views/section_compare[server_links, server_alignment, server_tooltip, server_size],
+  ./logic/setup[server_group_setup],
   ./logic/utils[make_named_color_list, order_cluster_data, cluster_subtitles],
   ./logic/code_gen[chart_code, data_code],
   ./logic/examples[EXAMPLES],
@@ -29,11 +30,12 @@ function(input, output, session) {
   )
 
   server_data("data", r = r, toaster_id = "toasts")
+  server_group_setup("groupSetup", r = r)
   theme_inputs <- server_theme("theme")
   gene_inputs <- server_genes("genes", r = r)
   color_inputs <- server_colors("colors")
   label_inputs <- server_labels("labels", r = r)
-  legend_inputs <- server_legend("legend")
+  legend_inputs <- server_legend("legend", r = r)
   title_inputs <- server_titles("titles", r = r)
   scale_inputs <- server_scale("scale")
   coordinate_inputs <- server_coordinates("coordinates")
@@ -129,7 +131,8 @@ function(input, output, session) {
       v[!is.na(v) & nzchar(v)]
     }
     switch(id,
-      "labels-label" = , "links-group" = , "alignment-idColumn" = cols,
+      "labels-label" = c("None" = NONE, cols),
+      "links-group" = , "alignment-idColumn" = cols,
       "tooltip-columns" = cols,
       "titles-label_subtitleColumn" = c("Manual text" = NONE, cols),
       "labels-styleBy" = , "genes-styleBy" = c("Group column" = NONE, cols),

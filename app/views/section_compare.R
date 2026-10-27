@@ -9,6 +9,7 @@ box::use(
   ../logic/ui_helpers[field, text_field, num_field, select_field, switch_field,
                       textarea_field, field_group, sections, when_on, register_input,
                       ALIGNMENTS, NONE],
+  ../logic/setup[setup_notice, setup_action, column_has_values],
   ../logic/utils[num, txt, compact, parse_delimited_input, pick_choice],
   ../logic/alignment_data[validate_alignment]
 )
@@ -27,6 +28,7 @@ ui_links <- function(id, data) {
       when_on(ns, "show",
         select_field(ns("source"), "Link source",
                      c("Matching gene values" = "matching", "Alignment blocks" = "alignment"), "matching"),
+        uiOutput(ns("setup")),
         matching(
           select_field(ns("group"), "Match on", names(data), "class",
                        description = "Genes with the same value in this column are linked."),
@@ -110,13 +112,16 @@ server_links <- function(id, r) {
                    variant = "destructive", icon = "alert-circle", duration = 8000)
       })
     }, ignoreInit = TRUE, ignoreNULL = FALSE)
-    reactive({
+    settings <- reactive({
       external <- identical(input$source, "alignment")
       measure <- input$measure %||% "identity"
       problem <- if (external && is.null(r$link_data)) {
         "Upload an alignment CSV, or choose matching gene values."
       } else if (external && measure != "none" && !measure %in% names(r$link_data)) {
         paste("The alignment has no", measure, "column. Choose Strand only or upload that measure.")
+      }
+      if (!external && !column_has_values(r$cluster_data, input$group)) {
+        problem <- "Choose a matching column with gene names or other values shared between clusters."
       }
       if (external && is.null(problem)) {
         cluster_col <- r$input[["cluster"]]
@@ -152,6 +157,23 @@ server_links <- function(id, r) {
         ))
       )
     })
+    output$setup <- renderUI({
+      value <- settings()
+      if (!isTRUE(input$show) || is.null(value$problem)) return(NULL)
+      missing_measure <- value$useAlignment && !is.null(r$link_data) &&
+        value$args$measure != "none" && !value$args$measure %in% names(r$link_data)
+      mismatch <- value$useAlignment && !is.null(r$link_data) && !missing_measure
+      setup_notice("Links need more information", value$problem,
+                   if (missing_measure) setup_action(session$ns("strandOnly"), "Use strand only"),
+                   if (mismatch) setup_action(session$ns("chooseCluster"), "Check cluster column"))
+    })
+    observeEvent(input$strandOnly, update_block_select(session, "measure", selected = "none"))
+    observeEvent(input$chooseCluster, {
+      root <- session$rootScope()
+      shinyblocks::update_block_nav(root, "section", selected = "data")
+      root$sendCustomMessage("gv-open-settings", list(focus = "data-cluster"))
+    })
+    settings
   })
 }
 
@@ -219,6 +241,7 @@ ui_tooltip <- function(id, data) {
       "Tooltip",
       switch_field(ns("show"), "Show a tooltip on genes", TRUE),
       when_on(ns, "show",
+        uiOutput(ns("setup")),
         field(ns("columns"), "Columns",
               block_combobox(ns("columns"), choices = names(data), selected = c("start", "end"),
                              multiple = TRUE, placeholder = "Pick columns",
@@ -244,6 +267,13 @@ server_tooltip <- function(id, r) {
                               intersect(c(r$input[["start"]], r$input[["end"]]), cols))
       update_block_combobox(session, "columns", choices = cols, selected = selected)
     }, ignoreInit = TRUE)
+    output$setup <- renderUI({
+      selected <- intersect(input$columns, names(r$cluster_data))
+      if (isTRUE(input$show) && length(selected) == 0L && is.null(txt(input$formatter))) {
+        setup_notice("Choose what to show in the tooltip",
+                     "Pick columns below, or enter custom text, to show information when you hover a gene.")
+      }
+    })
     reactive({
       cols <- input$columns
       formatter <- txt(input$formatter) %||% if (length(cols) > 0) {

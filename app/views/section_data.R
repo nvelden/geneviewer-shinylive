@@ -11,6 +11,7 @@ box::use(
   ../logic/logic_load_controls[set_inputs_from_columns, load_gene_data],
   ../logic/ui_helpers[field, select_field, field_group, register_input, NONE],
   ../logic/utils[opt],
+  ../logic/setup[setup_notice],
   ../logic/examples[EXAMPLES]
 )
 
@@ -56,6 +57,7 @@ ui_data <- function(id, data) {
     ),
     field_group(
       "Columns",
+      uiOutput(ns("setup")),
       lapply(names(COLUMNS), function(col) {
         select_field(ns(col), COLUMNS[[col]], column_choices(cols), defaults[[col]])
       })
@@ -97,6 +99,16 @@ server_data <- function(id, r, toaster_id) {
       }
     }
 
+    output$setup <- renderUI({
+      missing <- c("start", "end")[!vapply(c("start", "end"), function(key) {
+        col <- r$input[[key]]
+        length(col) == 1L && col %in% names(r$cluster_data)
+      }, logical(1))]
+      if (length(missing)) setup_notice(
+        "Choose the gene position columns",
+        paste0("Select ", paste(missing, collapse = " and "),
+               " columns below so genes can be placed on the chart. Values should be positions in base pairs."))
+    })
     output$summary <- renderUI({
       data <- r$cluster_data
       col <- r$input[["cluster"]]
