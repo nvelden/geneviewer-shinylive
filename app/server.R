@@ -341,8 +341,12 @@ function(input, output, session) {
       add_shown("GC_scaleBar", c(scale$bar$args, scale$bar$style)) |>
       add_shown("GC_clusterTitle", c(titles$title$args, titles$title$style)) |>
       add_shown("GC_clusterFooter", c(titles$footer$args, titles$footer$style)) |>
-      add_shown("GC_clusterLabel", c(titles$label$args, titles$label$style)) |>
-      add("GC_legend", list(group = group), legend$args, legend$style) |>
+      add_shown("GC_clusterLabel", c(titles$label$args, titles$label$style))
+    # Without a group the legend has nothing to show, and GC_legend() stops
+    if (!is.null(group)) {
+      chart <- add(chart, "GC_legend", list(group = group), legend$args, legend$style)
+    }
+    chart <- chart |>
       add_shown("GC_coordinates", c(coordinates$args, coordinates$style)) |>
       add("GC_sequence", sequence$args, sequence$style) |>
       add("GC_color",

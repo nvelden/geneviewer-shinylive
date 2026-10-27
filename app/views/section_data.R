@@ -45,10 +45,11 @@ ui_data <- function(id, data) {
         ns("files"),
         variant = "dropzone",
         multiple = TRUE,
+        append = TRUE,
         accept = c(".csv", ".gbk", ".gb"),
         dropzone_icon = "upload",
         dropzone_label = "Drop files or click to upload",
-        dropzone_hint = "CSV, or GenBank files with one cluster each"
+        dropzone_hint = "CSV, or GenBank files with one cluster each. Drop more to add them."
       ),
       tags$a(class = "gv-button-outline", href = "gene_cluster_example.csv", download = NA,
              block_icon("download", size = "sm"), "Example CSV")
