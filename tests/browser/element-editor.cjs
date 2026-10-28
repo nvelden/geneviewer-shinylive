@@ -75,6 +75,7 @@ const assert=require('node:assert/strict');
  await page.waitForFunction(()=>document.querySelector('[data-sb-input-id="element-fill"] input')?.value==='#d62728');
  await page.click('[data-sb-input-id="element-reset"] button');
  await page.waitForFunction(()=>!document.querySelector('#chartCode')?.textContent.includes('GC_element_style'));
+ await page.waitForFunction(()=>{const field=document.querySelector('[data-sb-input-id="element-fill"] input');return field && field.value!=='#d62728';});
 
  // Escape ends the selection.
  await page.$eval(`#gcChart .gene[rowID="${row}"]`,e=>e.focus());await page.keyboard.press('Escape');

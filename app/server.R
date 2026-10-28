@@ -286,6 +286,13 @@ function(input, output, session) {
     req(target)
     open_section(target[[1]], if (length(target) == 2) target[[2]])
   })
+  observeEvent(input$gcChart_drag, {
+    req(isTRUE(input$editMode), isTRUE(input$dragMode))
+    element_editor$move(input$gcChart_drag)
+  })
+  observeEvent(input$editMode, {
+    shinyblocks::update_block_switch(session, "dragMode", disabled = !isTRUE(input$editMode), notify = FALSE)
+  })
   # Enter on a selectable element that has keyboard focus
   observeEvent(input$gcChart_dblclick, {
     req(isTRUE(input$editMode))
@@ -295,7 +302,7 @@ function(input, output, session) {
   # or Escape ends the selection
   observeEvent(input$gcChart_select, {
     if (is.null(input$gcChart_select)) element_editor$clear()
-    else if (isTRUE(input$editMode)) element_editor$open(input$gcChart_select)
+    else if (isTRUE(input$editMode)) element_editor$open(input$gcChart_select, navigate = FALSE)
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
   observeEvent(input$editMode, {
     if (!isTRUE(input$editMode)) element_editor$clear()
@@ -402,6 +409,7 @@ function(input, output, session) {
     chart <- add(chart, "GC_events", list(
       click = isTRUE(input$editMode), highlight = isTRUE(input$editMode),
       dblclick = isTRUE(input$editMode), select = isTRUE(input$editMode),
+      drag = isTRUE(input$editMode) && isTRUE(input$dragMode),
       rendered = TRUE, render_id = load_token
     ), record = FALSE)
 

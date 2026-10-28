@@ -257,3 +257,72 @@ test_that("all reported values populate fields without pinning unchanged styles"
       expect_identical(editor$edits()[[2]]$style$text, "")
   })
 })
+
+test_that("dragging text preserves styles and reset position removes only drag offsets", {
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
+      session$flushReact()
+      editor <- session$returned
+      event <- list(component = "title", part = "title", style = list(text = "Chart", moveX = 0, moveY = 0))
+      expect_true(editor$open(event))
+      session$flushReact()
+      session$setInputs(token = "1", fill = "red", fontStyle = "italic")
+      event$position <- list(moveX = 25, moveY = -10)
+      expect_true(editor$move(event))
+      expect_equal(editor$edits()[[1]]$id, list(part = "title"))
+      expect_equal(editor$edits()[[1]]$style,
+        list(fill = "red", fontStyle = "italic", moveX = 25, moveY = -10))
+      session$setInputs(resetPosition = 1)
+      expect_equal(editor$edits()[[1]]$style, list(fill = "red", fontStyle = "italic"))
+      expect_equal(editor$target()$drawn$moveX, 0)
+      event$component <- "genes"
+      event$data <- list(rowID = 1)
+      expect_false(editor$move(event))
+      event$component <- "title"
+      event$position$moveX <- Inf
+      expect_false(editor$move(event))
+      event$component <- "labels"
+      event$cluster <- "A"
+      event$part <- NULL
+      event$position <- list(moveX = 10, moveY = 5)
+      expect_true(editor$move(event))
+      expect_equal(tail(editor$edits(), 1)[[1]]$id, list(row_id = 1))
+  })
+})
+
+test_that("redraw refreshes the same selected element after resetting its styles", {
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
+      session$flushReact()
+      editor <- session$returned
+      event <- list(component = "labels", cluster = "A", data = list(rowID = 1),
+                    style = list(text = "Gene", fill = "#000000", moveX = 0, moveY = 0))
+      editor$open(event)
+      session$flushReact()
+      session$setInputs(token = "1", fill = "red")
+      event$position <- list(moveX = 25, moveY = 10)
+      editor$move(event)
+      session$flushReact()
+      session$setInputs(reset = 1)
+      expect_length(editor$edits(), 0)
+      # The widget reports the selected element's current style after redraw.
+      editor$open(event)
+      session$flushReact()
+      expect_equal(editor$target()$drawn, event$style)
+      html <- paste(output$fields$html, collapse = "")
+      expect_match(html, "#000000", fixed = TRUE)
+      expect_equal(editor$target()$drawn$moveX, 0)
+      token <- editor$target()$token
+      editor$open(event)
+      expect_equal(editor$target()$token, token)
+      # Refreshed inherited values must not become new overrides.
+      session$setInputs(token = token, fill = "#000000", text = "Gene", moveX = "0", moveY = "0")
+      expect_length(editor$edits(), 0)
+      # A redraw of an explicit edit keeps the fields and current section.
+      session$setInputs(fill = "red")
+      edited <- event
+      edited$style$fill <- "#ff0000"
+      editor$open(edited, navigate = FALSE)
+      expect_equal(editor$target()$token, token)
+  })
+})

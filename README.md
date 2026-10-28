@@ -79,6 +79,14 @@ label or marker part. Loading different data, changing coordinate, cluster or
 group columns, or changing cluster order clears edits. Replaying exported code
 requires the same input rows in the same order.
 
+**Drag elements** is off by default and available while **Click to edit** is on.
+Enable it to move gene labels, chart titles/subtitles and cluster titles, footers
+and labels. Text can cross cluster and title-area boundaries while retaining
+its original element identity. Position fields preview the movement; releasing saves pixel offsets
+in the generated code. Escape cancels the current move. **Reset position** clears
+only the drag offsets, retaining text, font, colour and rotation. Turning dragging
+off keeps click editing available.
+
 Gene-label settings appear when **Show gene labels** is on. Choosing a valid
 label column enables labels; turning them off retains the chosen column.
 

@@ -37,6 +37,7 @@ ui_element_scope <- function(id) {
 # The kinds of element that can be selected, by component: their name and
 # icon, and the section (and tab) with the settings of all of them
 KINDS <- list(
+  title = list(name = "Chart title", icon = "file-text", all = "Chart title settings", section = "titles", tab = "chart"),
   genes = list(name = "Gene", icon = "layers", all = "All genes", section = "genes"),
   labels = list(name = "Gene label", icon = "tag", all = "All gene labels", section = "labels"),
   coordinates = list(name = "Coordinate", icon = "hash", all = "All coordinates",
@@ -57,19 +58,20 @@ kind_of <- function(item) {
 }
 # Identified by their row; legend parts by group, other text by cluster and part
 BY_ROW <- c("genes", "labels", "coordinates")
+DRAGGABLE <- c("labels", "title", "clusterTitle", "clusterFooter", "clusterLabel")
 
 # The fields are rebuilt for each element, so they are not registered as
 # settings of the examples (see register_input())
 # Display current values, while keeping a way to restore inherited settings.
-text_input <- function(ns, name, label, value, drawn = NULL) {
+text_input <- function(ns, name, label, value) {
   field(ns(name), label, block_input(ns(name), value = value))
 }
 
-num_input <- function(ns, name, label, value, drawn = NULL, ...) {
+num_input <- function(ns, name, label, value, ...) {
   field(ns(name), label, block_input(ns(name), value = value, type = "number", ...))
 }
 
-select_input <- function(ns, name, label, choices, value, drawn = NULL) {
+select_input <- function(ns, name, label, choices, value) {
   if (nzchar(value) && !value %in% choices) choices <- c(choices, stats::setNames(value, value))
   choices <- c(stats::setNames(NONE, "Use chart settings"), choices)
   field(ns(name), label, block_select(ns(name), choices = choices,
@@ -90,12 +92,12 @@ field_value <- function(name, x) {
 }
 
 # Individual colour inputs use the app-wide swatches, with this module's updates.
-color_input <- function(ns, name, label, value, drawn = NULL) {
+color_input <- function(ns, name, label, value) {
   pick <- function(js_value) sprintf(
     "Shiny.setInputValue('%s', {field: '%s', value: %s}, {priority: 'event'})",
     ns("pick"), name, js_value)
   tags$div(class = "gv-color-field",
-    text_input(ns, name, label, value, drawn),
+    text_input(ns, name, label, value),
     color_swatches(ns(name), label, pick))
 }
 
@@ -107,6 +109,10 @@ server_element <- function(id, data_key, open_section, section = function() NULL
     generation <- 0L
     key <- function(item) paste(item$component, item$cluster, item$row_id, item$end, item$part, item$group,
                                 sep = ":")
+
+    edit_id <- function(item) compact(list(
+      row_id = item$row_id, end = item$end,
+      cluster = if (!is.null(item$part)) item$cluster, part = item$part, group = item$group))
 
     # Each element shown gets a token. Inputs that still come from the fields
     # of the previous element carry its token, and cannot change this one.
@@ -123,7 +129,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
           isTRUE(event$part %in% c("label", "marker"))
       } else if (event$component %in% BY_ROW) !is.null(event$data$rowID) else !is.null(event$part)
     }
-    open <- function(event) {
+    open <- function(event, navigate = TRUE) {
       if (!selectable(event)) return(FALSE)
       by_row <- event$component %in% BY_ROW
       # The first column that names the gene (of a coordinate), for the card
@@ -138,8 +144,21 @@ server_element <- function(id, data_key, open_section, section = function() NULL
                    gene = if (length(gene)) as.character(gene[[1]]),
                    drawn = event$style)
       current <- isolate(target())
-      if (is.null(current) || key(current) != key(item)) show(item)
-      open_section("element")
+      changed_target <- is.null(current) || key(current) != key(item)
+      # Own edits already have their values in the fields. Rebuild only when
+      # inherited values change, keeping focus while typing an override.
+      style <- isolate(edits()[[key(item)]]$style)
+      inherited <- setdiff(union(names(current$drawn), names(item$drawn)), names(style))
+      # Text opacity can change during hover; it is not a text editor field.
+      if (item$component != "genes" &&
+          !(item$component == "legend" && identical(item$part, "marker"))) {
+        inherited <- setdiff(inherited, "opacity")
+      }
+      changed_style <- any(vapply(inherited, function(name) {
+        !identical(field_value(name, current$drawn[[name]]), field_value(name, item$drawn[[name]]))
+      }, logical(1)))
+      if (changed_target || changed_style) show(item)
+      if (navigate || changed_target) open_section("element")
       TRUE
     }
 
@@ -156,6 +175,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
     what_of <- function(item) {
       kind <- kind_of(item)$name
       switch(item$component,
+        title = paste(kind, if (identical(item$part, "subtitle")) "subtitle"),
         legend = paste(kind, "\u00b7 group", item$group),
         coordinates = paste(if (identical(item$end, "end")) "End" else "Start", "coordinate",
                             if (!is.null(item$gene)) paste("\u00b7 gene", item$gene)),
@@ -193,20 +213,27 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       }
       gene <- item$component == "genes"
       legend_marker <- item$component == "legend" && identical(item$part, "marker")
+      fill <- function() field_group("Fill",
+        color_input(ns, "fill", "Color", value("fill")),
+        num_input(ns, "opacity", "Opacity", value("opacity"), min = 0, max = 1, step = 0.1)
+      )
+      border <- function() field_group("Border",
+        color_input(ns, "stroke", "Color", value("stroke")),
+        num_input(ns, "strokeWidth", "Width", value("strokeWidth"), min = 0, step = 0.5),
+        select_input(ns, "strokeDasharray", "Line", DASHES, value("strokeDasharray"))
+      )
       # Text can be changed and hidden; a coordinate can only be hidden
       font <- field_group("Font",
-        color_input(ns, "fill", "Color", value("fill"), drawn("fill")),
+        color_input(ns, "fill", "Color", value("fill")),
         num_input(ns, "fontSize", "Size (px)", value("fontSize"), min = 4, max = 72, step = 1),
-        select_input(ns, "fontWeight", "Weight", FONT_WEIGHTS, value("fontWeight"), drawn("fontWeight")),
-        select_input(ns, "fontStyle", "Style", FONT_STYLES, value("fontStyle"), drawn("fontStyle")),
-        select_input(ns, "fontFamily", "Family", FONT_FAMILIES, value("fontFamily"),
-                     drawn("fontFamily"))
+        select_input(ns, "fontWeight", "Weight", FONT_WEIGHTS, value("fontWeight")),
+        select_input(ns, "fontStyle", "Style", FONT_STYLES, value("fontStyle")),
+        select_input(ns, "fontFamily", "Family", FONT_FAMILIES, value("fontFamily"))
       )
       hide <- function(label, value) tags$div(class = "gv-switch-row",
         block_switch(ns("hide"), label, value = value, size = "sm"))
       text <- field_group("Text",
-        text_input(ns, "text", "Text", if (identical(style$text, "")) "" else value("text"),
-                   drawn("text")),
+        text_input(ns, "text", "Text", if (identical(style$text, "")) "" else value("text")),
         hide(paste("Hide this", if (item$component == "labels") "label" else item$part),
              identical(style$text, ""))
       )
@@ -227,44 +254,34 @@ server_element <- function(id, data_key, open_section, section = function() NULL
         tags$p(class = "gv-element-hint",
                "Current values are shown. Changes apply right away; clear a field to use the chart settings.")),
         tags$div(hidden = NA, textInput(ns("token"), NULL, item$token)),
+        if (item$component %in% DRAGGABLE) field_group("Drag offset",
+          num_input(ns, "moveX", "Move right (px)", value("moveX"), step = 1),
+          num_input(ns, "moveY", "Move down (px)", value("moveY"), step = 1),
+          block_button("Reset position", id = ns("resetPosition"), variant = "outline", size = "sm"),
+          tags$p(class = "gv-element-hint", "Offset from the configured layout; Reset position keeps other styling.")
+        ),
         if (legend_marker) tags$div(
-          field_group("Fill",
-            color_input(ns, "fill", "Color", value("fill"), drawn("fill")),
-            num_input(ns, "opacity", "Opacity", value("opacity"), drawn("opacity"), min = 0, max = 1, step = 0.1)
-          ),
-          field_group("Border",
-            color_input(ns, "stroke", "Color", value("stroke"), drawn("stroke")),
-            num_input(ns, "strokeWidth", "Width", value("strokeWidth"), drawn("strokeWidth"), min = 0, step = 0.5),
-            select_input(ns, "strokeDasharray", "Line", DASHES, value("strokeDasharray"), drawn("strokeDasharray"))
-          ),
+          fill(), border(),
           tags$p(class = "gv-element-hint", "These settings change the legend patch. Gene colours are set under Colors.")
         ) else if (gene) tags$div(
-          field_group("Fill",
-            color_input(ns, "fill", "Color", value("fill"), drawn("fill")),
-            num_input(ns, "opacity", "Opacity", value("opacity"), drawn("opacity"), min = 0, max = 1, step = 0.1)
-          ),
+          fill(),
           field_group("Shape",
-            select_input(ns, "marker", "Marker", MARKERS, value("marker"), drawn("marker")),
+            select_input(ns, "marker", "Marker", MARKERS, value("marker")),
             select_input(ns, "markerSize", "Size",
                          c("Small" = "small", "Medium" = "medium", "Large" = "large"),
-                         value("markerSize"), drawn("markerSize")),
-            num_input(ns, "markerHeight", "Height", value("markerHeight"), drawn("markerHeight"), min = 1, step = 1),
-            num_input(ns, "cornerRadius", "Corner radius", value("cornerRadius"), drawn("cornerRadius"), min = 0, step = 1),
+                         value("markerSize")),
+            num_input(ns, "markerHeight", "Height", value("markerHeight"), min = 1, step = 1),
+            num_input(ns, "cornerRadius", "Corner radius", value("cornerRadius"), min = 0, step = 1),
             tags$p(class = "gv-element-hint",
                    "The length of a gene comes from its start and end positions.")
           ),
           field_group("Arrowhead",
-            num_input(ns, "arrowheadWidth", "Width", value("arrowheadWidth"), drawn("arrowheadWidth"), min = 0, step = 1),
-            num_input(ns, "arrowheadHeight", "Height", value("arrowheadHeight"), drawn("arrowheadHeight"), min = 0, step = 1)
+            num_input(ns, "arrowheadWidth", "Width", value("arrowheadWidth"), min = 0, step = 1),
+            num_input(ns, "arrowheadHeight", "Height", value("arrowheadHeight"), min = 0, step = 1)
           ),
-          field_group("Border",
-            color_input(ns, "stroke", "Color", value("stroke"), drawn("stroke")),
-            num_input(ns, "strokeWidth", "Width", value("strokeWidth"), drawn("strokeWidth"), min = 0, step = 0.5),
-            select_input(ns, "strokeDasharray", "Line", DASHES, value("strokeDasharray"),
-                         drawn("strokeDasharray"))
-          ),
+          border(),
           field_group("Position",
-            num_input(ns, "y", "Vertical", value("y"), drawn("y"), min = 0, max = 100, step = 1),
+            num_input(ns, "y", "Vertical", value("y"), min = 0, max = 100, step = 1),
             tags$p(class = "gv-element-hint",
                    "From 0 (bottom) to 100 (top) of the cluster. The gene's label stays in place.")
           )
@@ -303,6 +320,9 @@ server_element <- function(id, data_key, open_section, section = function() NULL
         if (item$component == "labels")
           list(dx = num(input$dx), dy = num(input$dy), rotate = num(input$rotate))
       )
+      if (item$component %in% DRAGGABLE) {
+        style <- c(style, list(moveX = num(input$moveX), moveY = num(input$moveY)))
+      }
       style <- compact(style)
       # Populating a field must not turn inherited styling into an override.
       # Keep previous edits, and record only newly changed values.
@@ -320,7 +340,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
                       input$strokeWidth, input$strokeDasharray, input$y, input$text,
                       input$hide, input$fontSize, input$fontWeight, input$fontStyle,
                       input$fontFamily,
-                      input$dx, input$dy, input$rotate), {
+                      input$dx, input$dy, input$rotate, input$moveX, input$moveY), {
       item <- target()
       if (is.null(item) || !identical(input$token, item$token)) return()
       style <- read_style(item)
@@ -329,13 +349,44 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       # or its cluster and part
       all[[key(item)]] <- if (length(style)) {
         list(component = item$component,
-             id = compact(list(row_id = item$row_id, end = item$end,
-                               cluster = if (!is.null(item$part)) item$cluster, part = item$part,
-                               group = item$group)),
+             id = edit_id(item),
              style = style)
       }
       if (!identical(all, edits())) edits(all)
     }, ignoreInit = TRUE)
+
+    move <- function(event) {
+      if (!isTRUE(event$component %in% DRAGGABLE) || !selectable(event)) return(FALSE)
+      position <- event$position
+      if (!is.numeric(position$moveX) || !is.numeric(position$moveY) ||
+          length(position$moveX) != 1 || length(position$moveY) != 1 ||
+          !is.finite(position$moveX) || !is.finite(position$moveY)) return(FALSE)
+      open(event)
+      item <- isolate(target())
+      all <- isolate(edits())
+      previous <- all[[key(item)]]$style
+      all[[key(item)]] <- list(component = item$component,
+        id = edit_id(item),
+        style = utils::modifyList(if (is.null(previous)) list() else previous, position[c("moveX", "moveY")]))
+      edits(all)
+      item$drawn <- utils::modifyList(if (is.null(item$drawn)) list() else item$drawn, position[c("moveX", "moveY")])
+      show(item)
+      TRUE
+    }
+    observeEvent(input$resetPosition, {
+      item <- req(target())
+      req(item$component %in% DRAGGABLE)
+      all <- edits()
+      edit <- all[[key(item)]]
+      if (!is.null(edit)) {
+        edit$style[c("moveX", "moveY")] <- NULL
+        all[[key(item)]] <- if (length(edit$style)) edit else NULL
+        edits(all)
+      }
+      item$drawn$moveX <- 0
+      item$drawn$moveY <- 0
+      show(item)
+    })
 
     # A swatch fills in its colour field, as if typed
     observeEvent(input$pick, {
@@ -377,7 +428,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       )
     })
 
-    list(open = open, selectable = selectable, clear = function() target(NULL),
+    list(open = open, move = move, selectable = selectable, clear = function() target(NULL),
          edits = function() unname(edits()), target = target)
   })
 }

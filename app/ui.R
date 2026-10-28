@@ -162,6 +162,15 @@ ui <- block_page(
       Shiny.addCustomMessageHandler('gv-loaded', function (message) {
         gvLoaded(message.token);
       });
+      document.addEventListener('geneviewer:dragmove', function (event) {
+        var current = Shiny.shinyapp.$inputValues.gcChart_select;
+        var key = function (d) { return JSON.stringify([d.component, d.cluster, d.part, d.data && d.data.rowID]); };
+        if (!current || key(current) !== key(event.detail)) return;
+        ['moveX', 'moveY'].forEach(function (name) {
+          var field = document.querySelector('[data-sb-input-id=\"element-' + name + '\"] input:not([data-shiny-no-bind-input])');
+          if (field) field.value = event.detail.position[name];
+        });
+      });
       document.addEventListener('geneviewer:rendered', function (event) {
         if (event.target.id === 'gcChart') gvLoaded(event.detail.id);
       });
@@ -213,7 +222,10 @@ ui <- block_page(
           tags$p(class = "gv-canvas-hint",
                  "Click a gene, label, coordinate or cluster title to style it on its own, or any other part of the chart to open its settings. Hover the chart and use the download icon to save it as SVG or PNG.")
         ),
-        block_switch("editMode", "Click to edit", value = TRUE, size = "sm")
+        tags$div(class = "gv-edit-controls",
+          block_switch("editMode", "Click to edit", value = TRUE, size = "sm"),
+          block_switch("dragMode", "Drag elements", value = FALSE, size = "sm")
+        )
       ),
       tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto")),
       block_accordion(
