@@ -3,8 +3,7 @@
 box::use(
   shiny[NS, tags, moduleServer, observe, observeEvent, renderUI, uiOutput],
   shinyblocks[block_select, update_block_select],
-  ./ui_helpers[field, NONE],
-  ./utils[opt]
+  ./ui_helpers[field, NONE]
 )
 
 #' @export
@@ -44,11 +43,11 @@ ui_group_picker <- function(id, data) {
 }
 
 #' @export
-server_group_setup <- function(id, r) {
+server_group_setup <- function(id, r, mapping) {
   moduleServer(id, function(input, output, session) {
     observe({
       cols <- names(r$cluster_data)
-      selected <- r$input[["group"]]
+      selected <- mapping()$group
       if (length(selected) != 1L || !selected %in% cols) selected <- NONE
       for (view in c("legend", "colors")) {
         update_block_select(session$rootScope(), paste0(view, "-groupColumn"),
@@ -62,13 +61,12 @@ server_group_setup <- function(id, r) {
       if (!is.null(r$pending)) return()
       value <- input$choice$column
       if (length(value) != 1L || !value %in% c(NONE, names(r$cluster_data))) return()
-      r$input[["group"]] <- opt(value)
       update_block_select(session$rootScope(), "data-group", selected = value)
     })
     for (view in c("legend", "colors")) local({
       view <- view
       output[[paste0(view, "Hint")]] <- renderUI({
-        group <- r$input[["group"]]
+        group <- mapping()$group
         if (column_has_values(r$cluster_data, group)) return(NULL)
         empty <- length(group) == 1L && group %in% names(r$cluster_data)
         setup_notice(

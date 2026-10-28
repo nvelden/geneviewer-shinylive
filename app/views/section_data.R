@@ -8,9 +8,9 @@ box::use(
   shiny[NS, moduleServer, reactive, observeEvent, req, tags, uiOutput, renderUI],
   shinyblocks[block_file_input, block_combobox, update_block_select,
               update_block_combobox, update_block_file_input, block_icon, show_toast],
-  ../logic/logic_load_controls[set_inputs_from_columns, load_gene_data],
+  ../logic/logic_load_controls[detect_columns, load_gene_data],
   ../logic/ui_helpers[field, select_field, field_group, register_input, NONE],
-  ../logic/utils[opt],
+  ../logic/utils[opt, pick_choice],
   ../logic/setup[setup_notice],
   ../logic/examples[EXAMPLES]
 )
@@ -74,7 +74,7 @@ ui_data <- function(id, data) {
 }
 
 #' @export
-server_data <- function(id, r, toaster_id) {
+server_data <- function(id, r, toaster_id, load_dataset) {
   moduleServer(id, function(input, output, session) {
 
     # Offer the examples that are not loaded; uploaded data offers all
@@ -84,8 +84,9 @@ server_data <- function(id, r, toaster_id) {
       if (!identical(r$example, "upload")) update_block_file_input(session, "files", reset = TRUE)
     }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
-    update_cluster_choices <- function() {
-      col <- r$input[["cluster"]]
+    # The clusters of the cluster column; while a load is pending, its order
+    observeEvent(input$cluster, {
+      col <- opt(input$cluster)
       clusters <- if (!is.null(col) && col %in% names(r$cluster_data)) {
         unique(as.character(r$cluster_data[[col]]))
       } else {
@@ -93,15 +94,17 @@ server_data <- function(id, r, toaster_id) {
       }
       # A combobox needs at least one option: without clusters, clear the selection
       if (length(clusters) > 0) {
-        update_block_combobox(session, "order", choices = clusters, selected = character(0))
+        update_block_combobox(session, "order", choices = clusters,
+                              selected = pick_choice(r, session$ns("order"), input$order,
+                                                     clusters, character(0)))
       } else {
         update_block_combobox(session, "order", selected = character(0))
       }
-    }
+    }, ignoreInit = TRUE)
 
     output$setup <- renderUI({
       missing <- c("start", "end")[!vapply(c("start", "end"), function(key) {
-        col <- r$input[[key]]
+        col <- opt(input[[key]])
         length(col) == 1L && col %in% names(r$cluster_data)
       }, logical(1))]
       if (length(missing)) setup_notice(
@@ -111,7 +114,7 @@ server_data <- function(id, r, toaster_id) {
     })
     output$summary <- renderUI({
       data <- r$cluster_data
-      col <- r$input[["cluster"]]
+      col <- opt(input$cluster)
       n_clusters <- if (!is.null(col) && col %in% names(data)) length(unique(data[[col]])) else 1
       tags$div(
         class = "gv-dataset",
@@ -131,7 +134,16 @@ server_data <- function(id, r, toaster_id) {
       req(input$files)
       tryCatch({
         data <- load_gene_data(input$files)
-        r$cluster_data <- data
+        # Files dropped on an upload are added to it (the input appends), and
+        # keep the user's settings; a first upload starts a new chart
+        keep <- identical(r$example, "upload")
+        columns <- detect_columns(data, names(COLUMNS))
+        for (col in names(COLUMNS)) {
+          if (keep && isTRUE(input[[col]] %in% c(NONE, names(data)))) columns[[col]] <- input[[col]]
+        }
+        values <- stats::setNames(lapply(columns, `%||%`, NONE), paste0("data-", names(COLUMNS)))
+        if (!keep) values[["tooltip-columns"]] <- unlist(columns[c("start", "end")])
+
         r$link_data <- NULL
         r$link_code <- NULL
         r$link_name <- NULL
@@ -142,17 +154,7 @@ server_data <- function(id, r, toaster_id) {
         } else {
           sprintf("%s and %d more", input$files$name[1], nrow(input$files) - 1)
         }
-        r$input[["select_order"]] <- NULL
-        set_inputs_from_columns(data, r, names(COLUMNS))
-
-        for (col in names(COLUMNS)) {
-          update_block_select(
-            session, col,
-            choices = column_choices(names(data)),
-            selected = r$input[[col]] %||% NONE
-          )
-        }
-        update_cluster_choices()
+        load_dataset(data, values, keep = keep)
 
         # The toaster is on the page, outside this module
         show_toast(
@@ -171,19 +173,5 @@ server_data <- function(id, r, toaster_id) {
                    icon = "alert-circle", duration = 8000)
       })
     })
-
-    for (col in names(COLUMNS)) {
-      local({
-        col <- col
-        observeEvent(input[[col]], {
-          r$input[[col]] <- opt(input[[col]])
-          if (col == "cluster") update_cluster_choices()
-        }, ignoreInit = TRUE)
-      })
-    }
-
-    observeEvent(input$order, {
-      r$input[["select_order"]] <- if (length(input$order) > 0) input$order else NULL
-    }, ignoreInit = TRUE, ignoreNULL = FALSE)
   })
 }

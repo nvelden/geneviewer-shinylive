@@ -82,9 +82,9 @@ test_that("generated alignment code is executable and does not embed the data fr
 })
 
 test_that("link controls separate alignment blocks from matching genes", {
-  r <- shiny::reactiveValues(cluster_data = geneviewer::pQEB1_plasmids,
-                             input = list(cluster = "cluster"), link_data = NULL)
-  shiny::testServer(section_compare$server_links, args = list(r = r), {
+  r <- shiny::reactiveValues(cluster_data = geneviewer::pQEB1_plasmids, link_data = NULL)
+  mapping <- shiny::reactive(list(cluster = "cluster"))
+  shiny::testServer(section_compare$server_links, args = list(r = r, mapping = mapping), {
     session$setInputs(show = TRUE, source = "alignment", measure = "none", colorBar = "hide")
     expect_false(session$returned()$ready)
     r$link_data <- geneviewer::pQEB1_alignment

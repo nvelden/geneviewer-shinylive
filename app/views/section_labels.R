@@ -2,13 +2,13 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags, tagList, uiOutput, renderUI],
-  shinyblocks[update_block_select, update_block_switch],
+  shiny[NS, moduleServer, reactive, observe, observeEvent, req, tags, tagList, uiOutput, renderUI],
+  shinyblocks[update_block_switch],
   ../logic/ui_helpers[color_field, select_field, num_field, text_field, switch_field,
                       field_group, sections, when_on, group_style_fields, FONT_FAMILIES,
                       FONT_WEIGHTS, FONT_STYLES, ALIGNMENTS, NONE],
   ../logic/setup[ui_group_picker, column_has_values, setup_notice],
-  ../logic/utils[num, txt, opt, px, compact, parse_group_styles, split_unquoted, pick_choice]
+  ../logic/utils[num, txt, opt, px, compact, parse_group_styles, split_unquoted]
 )
 
 #' Font size, weight, style, family and colour fields, empty or "Default";
@@ -68,17 +68,6 @@ ui_labels <- function(id, data) {
 #' @export
 server_labels <- function(id, r) {
   moduleServer(id, function(input, output, session) {
-    # Only when the data changes: reading the selection here would make the
-    # update of the picker trigger this observer again
-    observeEvent(r$cluster_data, isolate({
-      req(r$cluster_data)
-      cols <- names(r$cluster_data)
-      update_block_select(session, "label", choices = c("None" = NONE, cols),
-                          selected = pick_choice(r, session$ns("label"), input$label, c(NONE, cols), NONE))
-      update_block_select(session, "styleBy", choices = c("Group column" = NONE, cols),
-                          selected = pick_choice(r, session$ns("styleBy"), input$styleBy,
-                                                 c(NONE, cols), NONE))
-    }))
     output$setup <- renderUI({
       if (!isTRUE(input$show)) return(NULL)
       if (!column_has_values(r$cluster_data, opt(input$label))) {
@@ -164,10 +153,10 @@ ui_legend <- function(id, data) {
 }
 
 #' @export
-server_legend <- function(id, r) {
+server_legend <- function(id, r, mapping) {
   moduleServer(id, function(input, output, session) {
     has_group <- reactive({
-      column_has_values(r$cluster_data, r$input[["group"]])
+      column_has_values(r$cluster_data, mapping()$group)
     })
     observe({
       available <- has_group()

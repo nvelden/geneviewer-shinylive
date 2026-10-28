@@ -5,11 +5,11 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, observeEvent, req, tags, conditionalPanel],
-  shinyblocks[block_tabs, block_tab, update_block_select],
+  shiny[NS, moduleServer, reactive, tags, conditionalPanel],
+  shinyblocks[block_tabs, block_tab],
   ../logic/ui_helpers[text_field, num_field, select_field, switch_field,
                       field_group, sections, when_on, ALIGNMENTS, FONT_STYLES, NONE],
-  ../logic/utils[num, txt, opt, px, compact, parse_delimited_input, pick_choice],
+  ../logic/utils[num, txt, opt, px, compact, parse_delimited_input],
   ./section_labels[font_fields, font_values]
 )
 
@@ -147,16 +147,8 @@ ui_titles <- function(id, data) {
 }
 
 #' @export
-server_titles <- function(id, r) {
+server_titles <- function(id) {
   moduleServer(id, function(input, output, session) {
-    observeEvent(r$cluster_data, {
-      cols <- names(r$cluster_data)
-      for (name in c("label_titleColumn", "label_subtitleColumn")) {
-        update_block_select(session, name, choices = c("Manual text" = NONE, cols),
-                            selected = pick_choice(r, session$ns(name), input[[name]],
-                                                   c(NONE, cols), NONE))
-      }
-    })
     reactive({
       list(
         chart = list(

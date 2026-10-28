@@ -2,7 +2,7 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags,
+  shiny[NS, moduleServer, reactive, observeEvent, req, tags,
         conditionalPanel, uiOutput, renderUI, renderText, textOutput, outputOptions],
   shinyblocks[block_combobox, update_block_select, update_block_combobox,
               block_file_input, update_block_file_input, show_toast],
@@ -82,15 +82,10 @@ ui_links <- function(id, data) {
 }
 
 #' @export
-server_links <- function(id, r) {
+server_links <- function(id, r, mapping) {
   moduleServer(id, function(input, output, session) {
-    observeEvent(r$cluster_data, isolate({
-      req(r$cluster_data)
-      cols <- names(r$cluster_data)
-      update_block_select(session, "group", choices = cols,
-                          selected = pick_choice(r, session$ns("group"), input$group, cols, cols[1]))
-      update_block_file_input(session, "alignmentFile", reset = TRUE)
-    }))
+    # An uploaded alignment belongs to the data it was loaded with
+    observeEvent(r$cluster_data, update_block_file_input(session, "alignmentFile", reset = TRUE))
     has_measure <- reactive({
       measure <- input$measure %||% "identity"
       data <- if (identical(input$source, "alignment")) r$link_data else r$cluster_data
@@ -141,7 +136,7 @@ server_links <- function(id, r) {
         problem <- "Choose a matching column with gene names or other values shared between clusters."
       }
       if (external && is.null(problem)) {
-        cluster_col <- r$input[["cluster"]]
+        cluster_col <- mapping()$cluster
         known <- if (!is.null(cluster_col) && cluster_col %in% names(r$cluster_data)) {
           unique(as.character(r$cluster_data[[cluster_col]]))
         } else "cluster"
@@ -219,15 +214,8 @@ ui_alignment <- function(id, data) {
 #' @export
 server_alignment <- function(id, r) {
   moduleServer(id, function(input, output, session) {
-    # Only when the data changes: reading the selection here would make the
-    # update of the picker trigger this observer again
-    observeEvent(r$cluster_data, isolate({
-      req(r$cluster_data)
-      cols <- names(r$cluster_data)
-      update_block_select(session, "idColumn", choices = cols,
-                          selected = pick_choice(r, session$ns("idColumn"), input$idColumn, cols, cols[1]))
-    }))
-    observeEvent(list(input$idColumn, r$cluster_data), {
+    # The genes of the column the user picks; loads set the genes themselves
+    observeEvent(input$idColumn, {
       req(r$cluster_data, input$idColumn %in% names(r$cluster_data))
       ids <- unique(as.character(r$cluster_data[[input$idColumn]]))
       ids <- ids[!is.na(ids) & nzchar(ids)]
@@ -279,12 +267,6 @@ ui_tooltip <- function(id, data) {
 #' @export
 server_tooltip <- function(id, r) {
   moduleServer(id, function(input, output, session) {
-    observeEvent(r$cluster_data, {
-      cols <- names(r$cluster_data)
-      selected <- pick_choice(r, session$ns("columns"), NULL, cols,
-                              intersect(c(r$input[["start"]], r$input[["end"]]), cols))
-      update_block_combobox(session, "columns", choices = cols, selected = selected)
-    }, ignoreInit = TRUE)
     output$setup <- renderUI({
       selected <- intersect(input$columns, names(r$cluster_data))
       if (isTRUE(input$show) && length(selected) == 0L && is.null(txt(input$formatter))) {

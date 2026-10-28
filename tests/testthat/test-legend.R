@@ -1,9 +1,9 @@
 box::use(../../app/views/section_labels)
 
 test_that("legend availability follows the group mapping without resetting settings", {
-  r <- shiny::reactiveValues(input = list(group = NULL),
-                             cluster_data = data.frame(category = c("A", "B")))
-  shiny::testServer(section_labels$server_legend, args = list(r = r), {
+  r <- shiny::reactiveValues(cluster_data = data.frame(category = c("A", "B")))
+  mapping <- shiny::reactiveVal(list(group = NULL))
+  shiny::testServer(section_labels$server_legend, args = list(r = r, mapping = mapping), {
     messages <- list()
     root <- session$rootScope()
     switch_update <- NULL
@@ -18,7 +18,7 @@ test_that("legend availability follows the group mapping without resetting setti
     expect_false(switch_update$notify)
     expect_false(session$returned()$args$show)
 
-    r$input <- list(group = "category")
+    mapping(list(group = "category"))
     session$flushReact()
     expect_true(messages[["gv-legend-availability"]]$available)
     expect_false(switch_update$disabled)
@@ -37,10 +37,10 @@ test_that("legend availability follows the group mapping without resetting setti
     expect_true(messages[["gv-legend-availability"]]$available)
     expect_true(session$returned()$args$show)
     session$setInputs(show = FALSE)
-    r$input <- list(group = NULL)
+    mapping(list(group = NULL))
     session$flushReact()
     expect_false(messages[["gv-legend-availability"]]$available)
-    r$input <- list(group = "category")
+    mapping(list(group = "category"))
     session$flushReact()
     expect_false(session$returned()$args$show)
     r$cluster_data <- data.frame(category = c(NA_character_, " "))

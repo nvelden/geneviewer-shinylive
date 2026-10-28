@@ -4,14 +4,13 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags],
-  shinyblocks[update_block_select],
+  shiny[NS, moduleServer, reactive, tags],
   ../logic/ui_helpers[color_field, select_field, num_field, text_field, switch_field,
                       field_group, sections, when_on, register_input, group_style_fields,
                       NONE],
   ../logic/setup[ui_group_picker],
   ../logic/utils[num, txt, opt, compact, parse_delimited_input, parse_named_colors,
-                 parse_group_styles, split_unquoted, pick_choice]
+                 parse_group_styles, split_unquoted]
 )
 
 #' @export
@@ -53,17 +52,8 @@ ui_genes <- function(id, data) {
 }
 
 #' @export
-server_genes <- function(id, r) {
+server_genes <- function(id) {
   moduleServer(id, function(input, output, session) {
-    # Only when the data changes: reading the selection here would make the
-    # update of the picker trigger this observer again
-    observeEvent(r$cluster_data, isolate({
-      req(r$cluster_data)
-      cols <- names(r$cluster_data)
-      update_block_select(session, "styleBy", choices = c("Group column" = NONE, cols),
-                          selected = pick_choice(r, session$ns("styleBy"), input$styleBy,
-                                                 c(NONE, cols), NONE))
-    }))
     reactive({
       list(
         args = compact(list(

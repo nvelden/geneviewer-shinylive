@@ -26,47 +26,23 @@ synonyms <- list(
   strand  = c("strand", "orientation", "direction", "sense", "polarity", "frame", "reading_frame")
 )
 
-#' Set inputs based on column names and synonyms in a data frame
+#' Find the columns of a data frame by their names or synonyms
 #'
-#' Checks if certain columns or any of their synonyms exist
-#' (case-insensitively) in a data frame, and updates entries
-#' in a reactiveValues object accordingly.
-#'
-#' For each logical input name, the function searches for any
-#' of its synonyms among the data's column names. If found,
-#' the column name (with original casing) is stored in
-#' \code{r$input[[name]]}. If no synonym matches, the value
-#' is set to NULL.
+#' For each logical input name, the first of its synonyms that is a column
+#' (case-insensitively) gives the column, with its original casing.
 #'
 #' @param data A data.frame containing the data
-#' @param r A reactiveValues object with an \code{$input} list
 #' @param input_names A character vector of desired input names to check
 #'                     (e.g. c("start", "end"))
-#' @return No return value; updates \code{r$input} by reference
+#' @return A named list of column names; NULL where no synonym matches
 #' @export
-set_inputs_from_columns <- function(data, r, input_names) {
+detect_columns <- function(data, input_names) {
   data_cols_lower <- tolower(colnames(data))
-
-  for (input_name in input_names) {
-    found <- FALSE
-
-    if (input_name %in% names(synonyms)) {
-      for (possible_name in synonyms[[input_name]]) {
-        match_idx <- which(data_cols_lower == tolower(possible_name))
-
-        if (length(match_idx) > 0) {
-          original_colname <- colnames(data)[match_idx[1]]
-          r$input[[input_name]] <- original_colname
-          found <- TRUE
-          break
-        }
-      }
-    }
-
-    if (!found) {
-      r$input[[input_name]] <- NULL
-    }
-  }
+  sapply(input_names, function(input_name) {
+    match_idx <- match(tolower(synonyms[[input_name]]), data_cols_lower)
+    match_idx <- match_idx[!is.na(match_idx)]
+    if (length(match_idx) > 0) colnames(data)[match_idx[1]]
+  }, simplify = FALSE)
 }
 
 #' Load gene data from CSV file(s)

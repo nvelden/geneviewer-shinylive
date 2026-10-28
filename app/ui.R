@@ -204,12 +204,12 @@ ui <- block_page(
     "))
   ),
   block_toaster("toasts"),
-  # Comes back to the server after all settings of an example (see server.R)
+  # Comes back after the settings of a dataset have arrived (see server.R)
   tags$div(hidden = NA, block_input("gvMarker")),
   tags$div(
     id = "gv-loading", class = "gv-loading", hidden = NA, role = "status",
-    tags$div(class = "gv-loading-card", block_spinner(label = "Loading example"),
-             tags$span("Loading example..."))
+    tags$div(class = "gv-loading-card", block_spinner(label = "Loading chart"),
+             tags$span("Loading chart..."))
   ),
   tags$div(
     class = "gv-workspace",

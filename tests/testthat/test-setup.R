@@ -8,28 +8,32 @@ box::use(
 runtime_id <- getFromNamespace("runtime_mount_id", "shinyblocks")
 
 test_that("shared colour pickers edit the data mapping and ignore stale example events", {
-  r <- shiny::reactiveValues(input = list(group = NULL),
-                             cluster_data = data.frame(name = c("A", "B")))
-  shiny::testServer(setup$server_group_setup, args = list(r = r), {
+  r <- shiny::reactiveValues(cluster_data = data.frame(name = c("A", "B")))
+  mapping <- shiny::reactiveVal(list(group = NULL))
+  shiny::testServer(setup$server_group_setup, args = list(r = r, mapping = mapping), {
     updates <- list()
     root <- session$rootScope()
     root$sendInputMessage <- function(id, message) updates[[id]] <<- message
     session$flushReact()
     expect_equal(updates[[runtime_id("select", root$ns("legend-groupColumn"))]]$selected, "__none__")
     expect_match(output$legendHint$html, "Choose a column to show a legend")
+    data_group <- runtime_id("select", root$ns("data-group"))
     session$setInputs(choice = list(column = "name"))
-    expect_equal(r$input$group, "name")
-    expect_equal(updates[[runtime_id("select", root$ns("data-group"))]]$selected, "name")
+    expect_equal(updates[[data_group]]$selected, "name")
+    # The data mapping follows when the Data picker sends its new value
+    mapping(list(group = "name"))
+    session$flushReact()
     expect_equal(updates[[runtime_id("select", root$ns("colors-groupColumn"))]]$selected, "name")
     expect_false(updates[[runtime_id("select", root$ns("colors-groupColumn"))]]$notify)
+    updates <- list()
     session$setInputs(choice = list(column = "unknown"))
-    expect_equal(r$input$group, "name")
+    expect_null(updates[[data_group]])
     r$pending <- list(token = 1)
     session$setInputs(choice = list(column = "__none__"))
-    expect_equal(r$input$group, "name")
+    expect_null(updates[[data_group]])
     r$pending <- NULL
     session$setInputs(choice = list(column = "__none__"))
-    expect_null(r$input$group)
+    expect_equal(updates[[data_group]]$selected, "__none__")
     r$cluster_data <- data.frame(other = "C")
     session$flushReact()
     expect_equal(updates[[runtime_id("select", root$ns("legend-groupColumn"))]]$selected, "__none__")
@@ -37,7 +41,7 @@ test_that("shared colour pickers edit the data mapping and ignore stale example 
 })
 
 test_that("missing and blank label columns explain setup and do not draw labels", {
-  r <- shiny::reactiveValues(input = list(), cluster_data = data.frame(name = c("A", "B")))
+  r <- shiny::reactiveValues(cluster_data = data.frame(name = c("A", "B")))
   shiny::testServer(section_labels$server_labels, args = list(r = r), {
     session$setInputs(show = TRUE, label = "__none__")
     expect_false(session$returned()$args$show)
@@ -69,16 +73,16 @@ test_that("hidden scale features offer actions using the existing switches", {
 })
 
 test_that("tooltip and link setup failures appear beside their controls", {
-  r <- shiny::reactiveValues(input = list(cluster = "cluster"),
-                             cluster_data = data.frame(cluster = c("one", "two"), gene = c("A", "A")),
+  r <- shiny::reactiveValues(cluster_data = data.frame(cluster = c("one", "two"), gene = c("A", "A")),
                              link_data = NULL)
+  mapping <- shiny::reactive(list(cluster = "cluster"))
   shiny::testServer(section_compare$server_tooltip, args = list(r = r), {
     session$setInputs(show = TRUE, columns = character(), formatter = "")
     expect_match(output$setup$html, "Choose what to show")
     session$setInputs(columns = "gene")
     expect_match(session$returned()$args$formatter, "gene")
   })
-  shiny::testServer(section_compare$server_links, args = list(r = r), {
+  shiny::testServer(section_compare$server_links, args = list(r = r, mapping = mapping), {
     session$setInputs(show = TRUE, source = "alignment", measure = "identity")
     expect_match(output$setup$html, "Upload an alignment CSV")
     r$link_data <- data.frame(cluster1 = "one", cluster2 = "two", start1 = 1, end1 = 2,
@@ -92,7 +96,7 @@ test_that("tooltip and link setup failures appear beside their controls", {
 
 
 test_that("choosing label text enables labels without overriding presets or explicit hiding", {
-  r <- shiny::reactiveValues(input = list(), pending = NULL,
+  r <- shiny::reactiveValues(pending = NULL,
     cluster_data = data.frame(name = "A", product = "Enzyme", empty = " "))
   shiny::testServer(section_labels$server_labels, args = list(r = r), {
     updates <- list()
@@ -121,11 +125,12 @@ test_that("choosing label text enables labels without overriding presets or expl
 
 
 test_that("gene-colored links omit inactive color settings and restore them in custom mode", {
-  r <- shiny::reactiveValues(input = list(cluster = "cluster"),
+  r <- shiny::reactiveValues(
     cluster_data = data.frame(cluster = c("A", "B"), gene = c("g", "g")),
     link_data = data.frame(cluster1 = "A", start1 = 1, end1 = 10,
                            cluster2 = "B", start2 = 1, end2 = 10))
-  shiny::testServer(section_compare$server_links, args = list(r = r), {
+  shiny::testServer(section_compare$server_links,
+                    args = list(r = r, mapping = shiny::reactive(list(cluster = "cluster"))), {
     session$setInputs(source = "matching", show = TRUE, group = "gene", measure = "none",
       useGroupColors = TRUE, normalColor = "red", invertedColor = "blue",
       vmin = "10", vmax = "90", colorBar = "show")
@@ -144,10 +149,11 @@ test_that("gene-colored links omit inactive color settings and restore them in c
 
 
 test_that("the color bar is available only for a selected measure with finite values", {
-  r <- shiny::reactiveValues(input = list(),
+  r <- shiny::reactiveValues(
     cluster_data = data.frame(gene = c("A", "A"), identity = c(95, 99), similarity = c(NA, NA)),
     link_data = data.frame(identity = c(NA, NaN)))
-  shiny::testServer(section_compare$server_links, args = list(r = r), {
+  shiny::testServer(section_compare$server_links,
+                    args = list(r = r, mapping = shiny::reactive(list(cluster = "cluster"))), {
     session$setInputs(source = "matching", group = "gene", measure = "identity", colorBar = "show")
     expect_identical(output$colorBarAvailable, "true")
     expect_true(session$returned()$style$color_bar)
