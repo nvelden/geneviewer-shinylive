@@ -3,7 +3,7 @@
 
 box::use(
   shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags,
-        conditionalPanel, uiOutput, renderUI],
+        conditionalPanel, uiOutput, renderUI, renderText, textOutput, outputOptions],
   shinyblocks[block_combobox, update_block_select, update_block_combobox,
               block_file_input, update_block_file_input, show_toast],
   ../logic/ui_helpers[color_field, field, text_field, num_field, select_field, switch_field,
@@ -21,6 +21,8 @@ ui_links <- function(id, data) {
     sprintf("input['%s'] !== 'alignment'", ns("source")), ...)
   alignment <- function(...) conditionalPanel(
     sprintf("input['%s'] === 'alignment'", ns("source")), ...)
+  custom_colors <- function(...) conditionalPanel(
+    sprintf("input['%s'] === 'alignment' || !input['%s']", ns("source"), ns("useGroupColors")), ...)
   sections(
     field_group(
       NULL,
@@ -49,17 +51,22 @@ ui_links <- function(id, data) {
         select_field(ns("measure"), "Color by",
                      c("Identity (%)" = "identity", "Similarity (%)" = "similarity", "Strand only" = "none"), "identity"),
         matching(switch_field(ns("label"), "Show measure labels", TRUE)),
-        select_field(ns("colorBar"), "Color bar", c("Show" = "show", "Hide" = "hide"),
-                     default = "show")
+        tags$div(style = "display:none", textOutput(ns("colorBarAvailable"))),
+        custom_colors(conditionalPanel(
+          sprintf("output['%s'] === 'true'", ns("colorBarAvailable")),
+          select_field(ns("colorBar"), "Color bar", c("Show" = "show", "Hide" = "hide"),
+                       default = "show")))
       ),
       field_group(
         "Colors",
-        matching(switch_field(ns("useGroupColors"), "Use the gene colors")),
-        color_field(ns("normalColor"), "Same strand", default = "#969696"),
-        color_field(ns("invertedColor"), "Opposite strand", default = "#d62728"),
-        color_field(ns("lowColor"), "Lowest measure", default = "white"),
-        num_field(ns("vmin"), "Min measure (%)", min = 0, max = 100, step = 1, default = 0),
-        num_field(ns("vmax"), "Max measure (%)", min = 0, max = 100, step = 1, default = 100)
+        matching(switch_field(ns("useGroupColors"), "Use the gene colors",
+          description = "When on, link fills follow the gene colors set under Colors. Turn off to set strand and measure colors here.")),
+        custom_colors(
+          color_field(ns("normalColor"), "Same strand", default = "#969696"),
+          color_field(ns("invertedColor"), "Opposite strand", default = "#d62728"),
+          num_field(ns("vmin"), "Min measure (%)", min = 0, max = 100, step = 1, default = 0),
+          num_field(ns("vmax"), "Max measure (%)", min = 0, max = 100, step = 1, default = 100)
+        )
       ),
       field_group(
         "Shape",
@@ -84,6 +91,15 @@ server_links <- function(id, r) {
                           selected = pick_choice(r, session$ns("group"), input$group, cols, cols[1]))
       update_block_file_input(session, "alignmentFile", reset = TRUE)
     }))
+    has_measure <- reactive({
+      measure <- input$measure %||% "identity"
+      data <- if (identical(input$source, "alignment")) r$link_data else r$cluster_data
+      if (measure == "none" || is.null(data) || !measure %in% names(data)) return(FALSE)
+      values <- suppressWarnings(as.numeric(as.character(data[[measure]])))
+      any(is.finite(values))
+    })
+    output$colorBarAvailable <- renderText(if (has_measure()) "true" else "false")
+    outputOptions(output, "colorBarAvailable", suspendWhenHidden = FALSE)
     output$alignmentSummary <- renderUI({
       if (is.null(r$link_data)) tags$p("No alignment loaded.") else {
         tags$p(sprintf("%d blocks: %s", nrow(r$link_data), r$link_name))
@@ -114,6 +130,7 @@ server_links <- function(id, r) {
     }, ignoreInit = TRUE, ignoreNULL = FALSE)
     settings <- reactive({
       external <- identical(input$source, "alignment")
+      gene_colors <- !external && isTRUE(input$useGroupColors)
       measure <- input$measure %||% "identity"
       problem <- if (external && is.null(r$link_data)) {
         "Upload an alignment CSV, or choose matching gene values."
@@ -145,12 +162,13 @@ server_links <- function(id, r) {
           value2 = if (!external) parse_delimited_input(txt(input$value2))
         )),
         style = compact(list(
-          use_group_colors = !external && isTRUE(input$useGroupColors),
-          color_bar = switch(input$colorBar %||% NONE, show = TRUE, hide = FALSE, NULL),
-          normal_color = txt(input$normalColor),
-          inverted_color = txt(input$invertedColor),
-          low_color = txt(input$lowColor),
-          vmin = num(input$vmin), vmax = num(input$vmax),
+          use_group_colors = gene_colors,
+          color_bar = if (!gene_colors) {
+            if (has_measure()) switch(input$colorBar %||% NONE, show = TRUE, hide = FALSE, NULL) else FALSE
+          },
+          normal_color = if (!gene_colors) txt(input$normalColor),
+          inverted_color = if (!gene_colors) txt(input$invertedColor),
+          vmin = if (!gene_colors) num(input$vmin), vmax = if (!gene_colors) num(input$vmax),
           curve = isTRUE(input$curve), linkWidth = num(input$linkWidth),
           linkStyle = compact(list(stroke = txt(input$stroke),
                                    strokeWidth = num(input$strokeWidth), fillOpacity = num(input$opacity)))

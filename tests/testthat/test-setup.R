@@ -118,3 +118,51 @@ test_that("choosing label text enables labels without overriding presets or expl
     expect_true(updates[[switch_id]]$checked)
   })
 })
+
+
+test_that("gene-colored links omit inactive color settings and restore them in custom mode", {
+  r <- shiny::reactiveValues(input = list(cluster = "cluster"),
+    cluster_data = data.frame(cluster = c("A", "B"), gene = c("g", "g")),
+    link_data = data.frame(cluster1 = "A", start1 = 1, end1 = 10,
+                           cluster2 = "B", start2 = 1, end2 = 10))
+  shiny::testServer(section_compare$server_links, args = list(r = r), {
+    session$setInputs(source = "matching", show = TRUE, group = "gene", measure = "none",
+      useGroupColors = TRUE, normalColor = "red", invertedColor = "blue",
+      vmin = "10", vmax = "90", colorBar = "show")
+    fields <- c("normal_color", "inverted_color", "vmin", "vmax", "color_bar")
+    expect_true(session$returned()$style$use_group_colors)
+    expect_false(any(fields %in% names(session$returned()$style)))
+    session$setInputs(useGroupColors = FALSE)
+    expect_equal(session$returned()$style[fields], list(normal_color = "red", inverted_color = "blue",
+      vmin = 10, vmax = 90, color_bar = FALSE))
+    expect_null(session$returned()$style$low_color)
+    session$setInputs(useGroupColors = TRUE, source = "alignment")
+    expect_false(session$returned()$style$use_group_colors)
+    expect_equal(session$returned()$style$normal_color, "red")
+  })
+})
+
+
+test_that("the color bar is available only for a selected measure with finite values", {
+  r <- shiny::reactiveValues(input = list(),
+    cluster_data = data.frame(gene = c("A", "A"), identity = c(95, 99), similarity = c(NA, NA)),
+    link_data = data.frame(identity = c(NA, NaN)))
+  shiny::testServer(section_compare$server_links, args = list(r = r), {
+    session$setInputs(source = "matching", group = "gene", measure = "identity", colorBar = "show")
+    expect_identical(output$colorBarAvailable, "true")
+    expect_true(session$returned()$style$color_bar)
+    session$setInputs(measure = "similarity")
+    expect_identical(output$colorBarAvailable, "false")
+    expect_false(session$returned()$style$color_bar)
+    session$setInputs(measure = "none")
+    expect_identical(output$colorBarAvailable, "false")
+    session$setInputs(source = "alignment", measure = "identity")
+    expect_identical(output$colorBarAvailable, "false")
+    r$link_data <- data.frame(identity = 98)
+    session$flushReact()
+    expect_identical(output$colorBarAvailable, "true")
+    r$link_data <- data.frame(other = 1)
+    session$flushReact()
+    expect_identical(output$colorBarAvailable, "false")
+  })
+})
