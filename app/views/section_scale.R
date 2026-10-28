@@ -4,7 +4,7 @@
 box::use(
   shiny[NS, moduleServer, reactive, tags, uiOutput, renderUI, observeEvent],
   shinyblocks[block_tabs, block_tab, update_block_switch],
-  ../logic/ui_helpers[text_field, num_field, select_field, switch_field, field_row,
+  ../logic/ui_helpers[color_field, text_field, num_field, select_field, switch_field, field_row,
                       field_group, sections, when_on, FONT_FAMILIES, TICK_FORMATS],
   ../logic/setup[setup_notice, setup_action],
   ../logic/utils[num, txt, opt, px, compact]
@@ -13,7 +13,7 @@ box::use(
 line_fields <- function(ns, prefix, color, width = 1, length = NULL) {
   id <- function(x) ns(paste0(prefix, x))
   field_row(
-    text_field(id("stroke"), "Color", default = color),
+    color_field(id("stroke"), "Color", default = color),
     num_field(id("strokeWidth"), "Width", min = 0, step = 0.5, default = width),
     if (!is.null(length)) num_field(id("lineLength"), "Length", min = 0, step = 1, default = length)
   )
@@ -30,7 +30,7 @@ text_fields <- function(ns, prefix, size, family, color = "black") {
   field_row(
     num_field(id("fontSize"), "Size (px)", min = 4, max = 72, step = 1, default = size),
     select_field(id("fontFamily"), "Family", FONT_FAMILIES, default = family),
-    text_field(id("fill"), "Color", default = color)
+    color_field(id("fill"), "Color", default = color)
   )
 }
 

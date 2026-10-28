@@ -8,6 +8,7 @@ box::use(
   ./views/section_genes[ui_genes, ui_colors],
   ./views/section_labels[ui_labels, ui_legend],
   ./views/section_titles[ui_titles],
+  ./views/section_element[ui_element, ui_element_scope],
   ./views/section_scale[ui_scale, ui_coordinates, ui_sequence],
   ./views/section_compare[ui_links, ui_alignment, ui_tooltip, ui_size]
 )
@@ -28,6 +29,8 @@ sections <- list(
                      "Text on or above each gene.", ui_labels("labels", data)),
   legend      = list("Legend", "list", "Legend",
                      "The key to the gene colours.", ui_legend("legend", data)),
+  element     = list("Selection", "edit", "Selection",
+                     "One element, styled on its own: a gene, label, coordinate, cluster text or legend part.", ui_element("element")),
   titles      = list("Titles", "file-text", "Titles",
                      "Titles, footers and labels of the clusters.", ui_titles("titles", data)),
   scale       = list("Scale", "chart-line", "Scale",
@@ -48,7 +51,7 @@ sections <- list(
 
 nav_groups <- list(
   "Data"        = c("data"),
-  "Appearance"  = c("theme", "genes", "colors", "labels", "legend"),
+  "Appearance"  = c("theme", "genes", "colors", "labels", "legend", "element"),
   "Layout"      = c("titles", "scale", "coordinates", "sequence", "size"),
   "Compare"     = c("links", "alignment"),
   "Interaction" = c("tooltip")
@@ -98,6 +101,7 @@ ui <- block_page(
     side = "right",
     id = "settings",
     class = "gv-inspector",
+    ui_element_scope("element"),
     inspector_panels
   ),
   header = block_header(
@@ -121,7 +125,7 @@ ui <- block_page(
     )
   ),
   tags$head(
-    tags$link(rel = "stylesheet", href = "app.css?v=20261027-inline-fields"),
+    tags$link(rel = "stylesheet", href = "app.css?v=20261027-scope"),
     tags$link(rel = "icon", type = "image/png", sizes = "16x16", href = "favicon-16x16.png"),
     tags$link(rel = "apple-touch-icon", href = "apple-touch-icon.png"),
     # Picking a section, or clicking a part of the chart, opens the settings
@@ -207,7 +211,7 @@ ui <- block_page(
         tags$div(
           tags$h2(class = "gv-canvas-title", "Preview"),
           tags$p(class = "gv-canvas-hint",
-                 "Click a part of the chart to edit it. Hover the chart and use the download icon to save it as SVG or PNG.")
+                 "Click a gene, label, coordinate or cluster title to style it on its own, or any other part of the chart to open its settings. Hover the chart and use the download icon to save it as SVG or PNG.")
         ),
         block_switch("editMode", "Click to edit", value = TRUE, size = "sm")
       ),

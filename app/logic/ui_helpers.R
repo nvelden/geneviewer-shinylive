@@ -68,6 +68,40 @@ text_field <- function(id, label, value = "", placeholder = NULL, description = 
         description, stacked)
 }
 
+#' Registered single-colour settings, for swatch updates
+#' @export
+COLOR_INPUTS <- new.env()
+
+SWATCHES <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
+              "#e377c2", "#7f7f7f", "#bcbd22", "#17becf", "#000000", "#ffffff")
+
+#' The shared colour swatches and custom picker
+#' @export
+color_swatches <- function(id, label, pick = NULL) {
+  if (is.null(pick)) pick <- function(value) sprintf(
+    "Shiny.setInputValue('gvColorPick', {id: '%s', value: %s}, {priority: 'event'})", id, value)
+  tags$div(class = "gv-swatches", role = "group", `aria-label` = paste(label, "swatches"),
+    lapply(SWATCHES, function(color) tags$button(
+      type = "button", class = "gv-swatch", style = paste0("background:", color),
+      title = color, `aria-label` = paste(label, color),
+      onclick = pick(sprintf("'%s'", color))
+    )),
+    tags$label(class = "gv-swatch gv-swatch-custom", title = "Other colour",
+      tags$input(type = "color", `aria-label` = paste(label, "(other colour)"),
+                 onchange = pick("this.value")))
+  )
+}
+
+#' A colour field with the same swatches as the individual-element editor
+#' @export
+color_field <- function(id, label, value = "", placeholder = NULL, description = NULL,
+                        stacked = FALSE, default = NULL) {
+  assign(id, TRUE, envir = COLOR_INPUTS)
+  tags$div(class = "gv-color-field",
+    text_field(id, label, value, placeholder, description, stacked, default),
+    color_swatches(id, label))
+}
+
 #' A labelled select. With a default (geneviewer's value), the first choice is
 #' "Default (...)", which sends nothing.
 #' @export

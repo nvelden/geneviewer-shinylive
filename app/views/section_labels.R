@@ -4,10 +4,10 @@
 box::use(
   shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags, tagList, uiOutput, renderUI],
   shinyblocks[update_block_select, update_block_switch],
-  ../logic/ui_helpers[select_field, num_field, text_field, switch_field,
+  ../logic/ui_helpers[color_field, select_field, num_field, text_field, switch_field,
                       field_group, sections, when_on, group_style_fields, FONT_FAMILIES,
                       FONT_WEIGHTS, FONT_STYLES, ALIGNMENTS, NONE],
-  ../logic/setup[ui_group_picker, column_has_values, setup_notice, setup_action],
+  ../logic/setup[ui_group_picker, column_has_values, setup_notice],
   ../logic/utils[num, txt, opt, px, compact, parse_group_styles, split_unquoted, pick_choice]
 )
 
@@ -22,7 +22,7 @@ font_fields <- function(ns, prefix = "", size = 12, weight = "normal", style = "
     select_field(id("fontWeight"), "Weight", FONT_WEIGHTS, default = weight),
     if (show_style) select_field(id("fontStyle"), "Style", FONT_STYLES, default = style),
     select_field(id("fontFamily"), "Family", FONT_FAMILIES, default = family),
-    text_field(id("fill"), "Color", default = color)
+    color_field(id("fill"), "Color", default = color)
   )
 }
 
@@ -44,12 +44,14 @@ ui_labels <- function(id, data) {
   sections(
     field_group(
       NULL,
-      switch_field(ns("show"), "Show gene labels"),
-      uiOutput(ns("setup")),
-      select_field(ns("label"), "Label genes with", c("None" = NONE, names(data)), NONE,
-                   description = "Choose a column containing gene names or other text to display.")
+      switch_field(ns("show"), "Show gene labels")
     ),
     when_on(ns, "show",
+      field_group(NULL,
+        uiOutput(ns("setup")),
+        select_field(ns("label"), "Label genes with", c("None" = NONE, names(data)), NONE,
+                     description = "Choose a column containing gene names or other text to display.")
+      ),
       field_group("Font", font_fields(ns, style = "italic")),
       field_group(
         "Position",
@@ -78,21 +80,24 @@ server_labels <- function(id, r) {
                                                  c(NONE, cols), NONE))
     }))
     output$setup <- renderUI({
+      if (!isTRUE(input$show)) return(NULL)
       if (!column_has_values(r$cluster_data, opt(input$label))) {
         selected <- opt(input$label)
         empty <- length(selected) == 1L && selected %in% names(r$cluster_data)
         setup_notice(
           if (empty) "This column has no label text" else "Choose a column to display gene labels",
-          if (empty) "Choose another column with gene names or other text below." else if (isTRUE(input$show))
-            "Select a column below. Its values will appear beside the genes." else
-            "Select a column with gene names or other text below, then turn on Show gene labels."
+          if (empty) "Choose another column with gene names or other text below." else
+            "Select a column below. Its values will appear beside the genes."
         )
-      } else if (!isTRUE(input$show)) {
-        setup_notice("Gene labels are hidden", "Your label column is ready.",
-                     setup_action(session$ns("enable"), "Show gene labels"))
       }
     })
-    observeEvent(input$enable, update_block_switch(session, "show", checked = TRUE))
+    # An explicit choice of label text implies that labels should be visible.
+    # Presets retain their own visibility preference while their inputs arrive.
+    observeEvent(input$label, {
+      req(is.null(r$pending), !isTRUE(input$show),
+          column_has_values(r$cluster_data, opt(input$label)))
+      update_block_switch(session, "show", checked = TRUE)
+    }, ignoreInit = TRUE)
     reactive({
       list(
         args = compact(list(
@@ -139,7 +144,7 @@ ui_legend <- function(id, data) {
           "Text",
           num_field(ns("fontSize"), "Size (px)", min = 4, max = 72, step = 1, default = 12),
           select_field(ns("fontFamily"), "Family", FONT_FAMILIES, default = "sans-serif"),
-          text_field(ns("fill"), "Color", default = "black")
+          color_field(ns("fill"), "Color", default = "black")
         ),
         field_group(
           "Markers",

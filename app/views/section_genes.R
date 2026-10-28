@@ -5,8 +5,8 @@
 
 box::use(
   shiny[NS, moduleServer, reactive, observe, observeEvent, isolate, req, tags],
-  shinyblocks[block_toggle_group, update_block_select],
-  ../logic/ui_helpers[field, select_field, num_field, text_field, switch_field,
+  shinyblocks[update_block_select],
+  ../logic/ui_helpers[color_field, select_field, num_field, text_field, switch_field,
                       field_group, sections, when_on, register_input, group_style_fields,
                       NONE],
   ../logic/setup[ui_group_picker],
@@ -17,23 +17,20 @@ box::use(
 #' @export
 ui_genes <- function(id, data) {
   ns <- NS(id)
-  register_input(ns("markerSize"), "toggle")
   sections(
     field_group(
       "Shape",
       select_field(ns("marker"), "Marker",
                    c("Arrow" = "arrow", "Box arrow" = "boxarrow", "Box" = "box",
                      "Capsule" = "cbox", "Rounded box" = "rbox"), default = "arrow"),
-      field(ns("markerSize"), "Size",
-            block_toggle_group(ns("markerSize"),
-                               choices = c("Small" = "small", "Medium" = "medium", "Large" = "large"),
-                               selected = "medium", variant = "outline", size = "sm")),
+      select_field(ns("markerSize"), "Size",
+                   c("Small" = "small", "Medium" = "medium", "Large" = "large"), default = "medium"),
       num_field(ns("markerHeight"), "Height", min = 1, step = 1,
                 description = "Empty takes the height from the size.")
     ),
     field_group(
       "Border",
-      text_field(ns("stroke"), "Color", default = "black"),
+      color_field(ns("stroke"), "Color", default = "black"),
       num_field(ns("strokeWidth"), "Width", min = 0, step = 0.5, default = 1),
       num_field(ns("cornerRadius"), "Corner radius", min = 0, step = 1,
                 description = "Empty keeps the marker's own corners.")
@@ -70,7 +67,7 @@ server_genes <- function(id, r) {
     reactive({
       list(
         args = compact(list(
-          marker = opt(input$marker), markerSize = input$markerSize,
+          marker = opt(input$marker), markerSize = opt(input$markerSize),
           style_by = opt(input$styleBy),
           groupStyle = parse_group_styles(input$groupStyle)
         )),
@@ -133,7 +130,7 @@ ui_colors <- function(id, data) {
         select_field(ns("pattern"), "Pattern", c("One per group" = NONE, PATTERNS), NONE),
         text_field(ns("patternGroups"), "Only groups", placeholder = "All groups",
                    description = "Groups to fill, separated by commas.", stacked = TRUE),
-        text_field(ns("patternColor"), "Color", default = "black"),
+        color_field(ns("patternColor"), "Color", default = "black"),
         num_field(ns("patternSize"), "Size", min = 2, step = 1, default = 6),
         select_field(ns("patternBackground"), "Background",
                      c("White" = "white", "Gene colors" = "none"), default = "white")

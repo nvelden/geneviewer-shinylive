@@ -6,7 +6,7 @@ box::use(
         conditionalPanel, uiOutput, renderUI],
   shinyblocks[block_combobox, update_block_select, update_block_combobox,
               block_file_input, update_block_file_input, show_toast],
-  ../logic/ui_helpers[field, text_field, num_field, select_field, switch_field,
+  ../logic/ui_helpers[color_field, field, text_field, num_field, select_field, switch_field,
                       textarea_field, field_group, sections, when_on, register_input,
                       ALIGNMENTS, NONE],
   ../logic/setup[setup_notice, setup_action, column_has_values],
@@ -55,9 +55,9 @@ ui_links <- function(id, data) {
       field_group(
         "Colors",
         matching(switch_field(ns("useGroupColors"), "Use the gene colors")),
-        text_field(ns("normalColor"), "Same strand", default = "#969696"),
-        text_field(ns("invertedColor"), "Opposite strand", default = "#d62728"),
-        text_field(ns("lowColor"), "Lowest measure", default = "white"),
+        color_field(ns("normalColor"), "Same strand", default = "#969696"),
+        color_field(ns("invertedColor"), "Opposite strand", default = "#d62728"),
+        color_field(ns("lowColor"), "Lowest measure", default = "white"),
         num_field(ns("vmin"), "Min measure (%)", min = 0, max = 100, step = 1, default = 0),
         num_field(ns("vmax"), "Max measure (%)", min = 0, max = 100, step = 1, default = 100)
       ),
@@ -67,7 +67,7 @@ ui_links <- function(id, data) {
         num_field(ns("linkWidth"), "Width", min = 0, max = 1, step = 0.1, default = 1,
                   description = "Share of the region length, from 0 to 1."),
         num_field(ns("opacity"), "Opacity", min = 0, max = 1, step = 0.1, default = 0.8),
-        text_field(ns("stroke"), "Border color", default = "none"),
+        color_field(ns("stroke"), "Border color", default = "none"),
         num_field(ns("strokeWidth"), "Border width", min = 0, step = 0.1, default = 1)
       )
     )

@@ -45,7 +45,7 @@ test_that("missing and blank label columns explain setup and do not draw labels"
     session$setInputs(label = "name")
     expect_true(session$returned()$args$show)
     session$setInputs(show = FALSE)
-    expect_match(output$setup$html, "Gene labels are hidden")
+    expect_null(output$setup)
     r$cluster_data <- data.frame(name = c(" ", NA_character_))
     session$flushReact()
     session$setInputs(show = TRUE)
@@ -87,5 +87,34 @@ test_that("tooltip and link setup failures appear beside their controls", {
     expect_match(output$setup$html, "Use strand only")
     session$setInputs(measure = "none")
     expect_true(session$returned()$ready)
+  })
+})
+
+
+test_that("choosing label text enables labels without overriding presets or explicit hiding", {
+  r <- shiny::reactiveValues(input = list(), pending = NULL,
+    cluster_data = data.frame(name = "A", product = "Enzyme", empty = " "))
+  shiny::testServer(section_labels$server_labels, args = list(r = r), {
+    updates <- list()
+    root <- session$rootScope()
+    root$sendInputMessage <- function(id, message) updates[[id]] <<- message
+    session$setInputs(show = FALSE, label = "__none__")
+    switch_id <- runtime_id("switch", session$ns("show"))
+    updates <- list()
+    session$setInputs(label = "name")
+    expect_true(updates[[switch_id]]$checked)
+    updates <- list()
+    session$setInputs(show = FALSE)
+    expect_null(updates[[switch_id]])
+    session$setInputs(label = "empty")
+    expect_null(updates[[switch_id]])
+    r$pending <- list(token = 1)
+    session$setInputs(label = "product")
+    expect_null(updates[[switch_id]])
+    r$pending <- NULL
+    session$flushReact()
+    expect_null(updates[[switch_id]])
+    session$setInputs(label = "name")
+    expect_true(updates[[switch_id]]$checked)
   })
 })

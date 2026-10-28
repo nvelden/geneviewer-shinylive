@@ -6,7 +6,7 @@
 box::use(
   shiny[NS, moduleServer, reactive, tags],
   shinyblocks[block_alert],
-  ../logic/ui_helpers[select_field, num_field, text_field, field_group, sections,
+  ../logic/ui_helpers[color_field, select_field, num_field, text_field, field_group, sections,
                       NONE, FONT_FAMILIES],
   ../logic/utils[num, txt, opt, compact]
 )
@@ -35,12 +35,12 @@ ui_theme <- function(id) {
       "Text",
       num_field(ns("textScale"), "Scale", 1, min = 0.5, max = 3, step = 0.1),
       select_field(ns("fontFamily"), "Font", c("Theme font" = NONE, FONT_FAMILIES), NONE),
-      text_field(ns("textColor"), "Color", placeholder = "Theme color")
+      color_field(ns("textColor"), "Color", placeholder = "Theme color")
     ),
     field_group(
       "Chart",
-      text_field(ns("lineColor"), "Line color", placeholder = "Theme color"),
-      text_field(ns("background"), "Background", placeholder = "Theme color")
+      color_field(ns("lineColor"), "Line color", placeholder = "Theme color"),
+      color_field(ns("background"), "Background", placeholder = "Theme color")
     ),
     field_group(
       NULL,

@@ -81,9 +81,9 @@ order_cluster_data <- function(data, cluster_col, order_vec) {
   return(df)
 }
 
-#' One subtitle per visible cluster, in the displayed order
+#' One value per visible cluster, in the displayed order (cluster label text or subtitle)
 #' @export
-cluster_subtitles <- function(data, cluster_col, value_col) {
+cluster_values <- function(data, cluster_col, value_col) {
   if (is.null(value_col) || !value_col %in% names(data)) return(NULL)
   groups <- if (is.null(cluster_col)) rep("all", nrow(data)) else as.character(data[[cluster_col]])
   vapply(unique(groups), function(group) {

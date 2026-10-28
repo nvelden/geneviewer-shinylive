@@ -34,14 +34,14 @@ test_that("host subtitles stay with the visible plasmids and Tn7 strains", {
   data <- geneviewer::pQEB1_plasmids
   order <- c("pQEB1_inv1_arsTn", "pQEB1")
   selected <- utils$order_cluster_data(data, "cluster", order)
-  expect_identical(utils$cluster_subtitles(selected, "cluster", "host"),
+  expect_identical(utils$cluster_values(selected, "cluster", "host"),
                    c("K. oxytoca KOX-3", "E. cloacae"))
   tn7 <- examples$EXAMPLES$tn7$data()
   clusters <- rev(unique(tn7$cluster))[1:2]
   selected <- utils$order_cluster_data(tn7, "cluster", clusters)
   expected <- vapply(clusters, function(x) tn7$strain_short[match(x, tn7$cluster)], "")
-  expect_equal(utils$cluster_subtitles(selected, "cluster", "strain_short"), unname(expected))
-  expect_null(utils$cluster_subtitles(data, "cluster", NULL))
+  expect_equal(utils$cluster_values(selected, "cluster", "strain_short"), unname(expected))
+  expect_null(utils$cluster_values(data, "cluster", NULL))
 })
 
 test_that("alignment CSV validation preserves inversions and rejects invalid tables", {

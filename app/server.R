@@ -6,17 +6,26 @@ box::use(
   ./views/section_genes[server_genes, server_colors],
   ./views/section_labels[server_labels, server_legend],
   ./views/section_titles[server_titles],
+  ./views/section_element[server_element],
   ./views/section_scale[server_scale, server_coordinates, server_sequence],
   ./views/section_compare[server_links, server_alignment, server_tooltip, server_size],
   ./logic/setup[server_group_setup],
-  ./logic/utils[make_named_color_list, order_cluster_data, cluster_subtitles],
+  ./logic/utils[make_named_color_list, order_cluster_data, cluster_values],
   ./logic/code_gen[chart_code, data_code],
   ./logic/examples[EXAMPLES],
-  ./logic/ui_helpers[INPUT_TYPES, NONE],
+  ./logic/ui_helpers[INPUT_TYPES, COLOR_INPUTS, NONE],
   ./views/section_data[column_choices],
 )
 
 function(input, output, session) {
+
+  observeEvent(input$gvColorPick, {
+    pick <- input$gvColorPick
+    req(is.character(pick$id), length(pick$id) == 1,
+        exists(pick$id, envir = COLOR_INPUTS, inherits = FALSE),
+        is.character(pick$value), length(pick$value) == 1)
+    shinyblocks::update_block_input(session, pick$id, value = pick$value)
+  })
 
   r <- reactiveValues(
     input = list(
@@ -134,7 +143,7 @@ function(input, output, session) {
       "labels-label" = c("None" = NONE, cols),
       "links-group" = , "alignment-idColumn" = cols,
       "tooltip-columns" = cols,
-      "titles-label_subtitleColumn" = c("Manual text" = NONE, cols),
+      "titles-label_titleColumn" = , "titles-label_subtitleColumn" = c("Manual text" = NONE, cols),
       "labels-styleBy" = , "genes-styleBy" = c("Group column" = NONE, cols),
       "data-start" = , "data-end" = , "data-cluster" = , "data-group" = , "data-strand" =
         column_choices(cols),
@@ -251,24 +260,45 @@ function(input, output, session) {
     if (identical(input$gvMarker, as.character(r$pending$token))) r$pending <- NULL
   })
 
-  # Click to edit: a click on a part of the chart opens its settings
+  # Click to edit: a click on a gene or label opens it in the Selection
+  # section, a click on another part of the chart opens its settings. Legend
+  # labels and markers are edited individually; viewing mode toggles groups.
+  open_section <- function(section, tab = NULL) {
+    shinyblocks::update_block_nav(session, "section", selected = section)
+    if (!is.null(tab)) shinyblocks::update_block_tabs(session, paste0(section, "-tab"), selected = tab)
+    session$sendCustomMessage("gv-open-settings", TRUE)
+  }
+  element_editor <- server_element("element", data_key = reactive(list(
+    r$cluster_data, r$input[c("start", "end", "cluster", "select_order", "group")]
+  )), open_section = open_section, section = reactive(input$section))
   click_sections <- list(
-    genes = "genes", transcript = "genes", labels = "labels",
-    coordinates = "coordinates", links = "links", legend = "legend",
+    transcript = "genes", coordinates = "coordinates", links = "links", legend = "legend",
     sequence = "sequence",
     scale = c("scale", "axis"), scaleBar = c("scale", "scalebar"),
-    clusterTitle = c("titles", "title"), clusterFooter = c("titles", "footer"),
+    title = c("titles", "chart"), clusterTitle = c("titles", "title"), clusterFooter = c("titles", "footer"),
     clusterLabel = c("titles", "label")
   )
+  # Elements that can be selected follow the selection (below), so a second
+  # click on one, which ends its selection, does not open it again
   observeEvent(input$gcChart_click, {
-    req(isTRUE(input$editMode))
+    req(isTRUE(input$editMode), !element_editor$selectable(input$gcChart_click))
     target <- click_sections[[input$gcChart_click$component %||% ""]]
     req(target)
-    shinyblocks::update_block_nav(session, "section", selected = target[[1]])
-    if (length(target) == 2) {
-      shinyblocks::update_block_tabs(session, paste0(target[[1]], "-tab"), selected = target[[2]])
-    }
-    session$sendCustomMessage("gv-open-settings", TRUE)
+    open_section(target[[1]], if (length(target) == 2) target[[2]])
+  })
+  # Enter on a selectable element that has keyboard focus
+  observeEvent(input$gcChart_dblclick, {
+    req(isTRUE(input$editMode))
+    element_editor$open(input$gcChart_dblclick)
+  })
+  # Selecting an element opens it; a second click on it, a click elsewhere
+  # or Escape ends the selection
+  observeEvent(input$gcChart_select, {
+    if (is.null(input$gcChart_select)) element_editor$clear()
+    else if (isTRUE(input$editMode)) element_editor$open(input$gcChart_select)
+  }, ignoreNULL = FALSE, ignoreInit = TRUE)
+  observeEvent(input$editMode, {
+    if (!isTRUE(input$editMode)) element_editor$clear()
   })
 
   output$gcChart <- geneviewer::renderGC_chart({
@@ -287,9 +317,13 @@ function(input, output, session) {
     labels <- label_inputs()
     legend <- legend_inputs()
     titles <- title_inputs()
+    if (!is.null(titles$label$titleColumn)) {
+      titles$label$args$title <- cluster_values(data, r$input[["cluster"]],
+                                              titles$label$titleColumn)
+    }
     if (!is.null(titles$label$subtitleColumn)) {
-      titles$label$args$subtitle <- cluster_subtitles(data, r$input[["cluster"]],
-                                                    titles$label$subtitleColumn)
+      titles$label$args$subtitle <- cluster_values(data, r$input[["cluster"]],
+                                                 titles$label$subtitleColumn)
     }
     scale <- scale_inputs()
     coordinates <- coordinate_inputs()
@@ -367,6 +401,7 @@ function(input, output, session) {
     # App interaction and loading events are not part of the exported code.
     chart <- add(chart, "GC_events", list(
       click = isTRUE(input$editMode), highlight = isTRUE(input$editMode),
+      dblclick = isTRUE(input$editMode), select = isTRUE(input$editMode),
       rendered = TRUE, render_id = load_token
     ), record = FALSE)
 
@@ -384,6 +419,11 @@ function(input, output, session) {
         if (links$useAlignment) recorded$data <- quote(alignment)
         chart <- add(chart, "GC_links", args, code_args = recorded)
       }
+    }
+
+    # Styles of single genes and labels (the Selection section)
+    for (edit in element_editor$edits()) {
+      chart <- add(chart, "GC_element_style", c(list(component = edit$component), edit$id, edit$style))
     }
 
     # The code is extra: a problem with it must not stop the chart
