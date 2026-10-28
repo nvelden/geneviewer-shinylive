@@ -326,3 +326,28 @@ test_that("redraw refreshes the same selected element after resetting its styles
       expect_equal(editor$target()$token, token)
   })
 })
+
+
+for (component in c("scale", "scaleBar")) test_that(paste(component, "moves as a whole and replays its cluster position"), {
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
+      session$flushReact()
+      editor <- session$returned
+      event <- list(component = component, cluster = "A", style = list(moveX = 0, moveY = 0),
+                    position = list(moveX = 35, moveY = 20))
+      expect_true(editor$move(event))
+      expect_equal(editor$edits()[[1]]$id, list(cluster = "A"))
+      expect_equal(editor$edits()[[1]]$style, event$position)
+      edit <- editor$edits()[[1]]
+      chart <- geneviewer::GC_chart(data.frame(start = c(1, 30), end = c(20, 50), cluster = c("A", "B")),
+                                  cluster = "cluster")
+      chart <- do.call(geneviewer::GC_element_style, c(list(chart, component = edit$component), edit$id, edit$style))
+      expect_equal(chart$x$series$A[[component]]$itemStyle, list(event$position))
+      expect_null(chart$x$series$B[[component]]$itemStyle)
+      session$flushReact()
+      session$setInputs(resetPosition = 1)
+      expect_length(editor$edits(), 0)
+      expect_equal(editor$target()$drawn$moveX, 0)
+      expect_equal(editor$target()$drawn$moveY, 0)
+    })
+})

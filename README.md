@@ -81,7 +81,8 @@ requires the same input rows in the same order.
 
 **Drag elements** is off by default and available while **Click to edit** is on.
 Enable it to move gene labels, chart titles/subtitles and cluster titles, footers
-and labels. Text can cross cluster and title-area boundaries while retaining
+and labels, or move a whole numbered axis or scale bar by dragging its line,
+ticks or text. Text can cross cluster and title-area boundaries while retaining
 its original element identity. Position fields preview the movement; releasing saves pixel offsets
 in the generated code. Escape cancels the current move. **Reset position** clears
 only the drag offsets, retaining text, font, colour and rotation. Turning dragging

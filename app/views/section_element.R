@@ -37,6 +37,8 @@ ui_element_scope <- function(id) {
 # The kinds of element that can be selected, by component: their name and
 # icon, and the section (and tab) with the settings of all of them
 KINDS <- list(
+  scale = list(name = "Scale axis", icon = "hash", all = "Axis settings", section = "scale", tab = "axis"),
+  scaleBar = list(name = "Scale bar", icon = "hash", all = "Scale bar settings", section = "scale", tab = "scalebar"),
   title = list(name = "Chart title", icon = "file-text", all = "Chart title settings", section = "titles", tab = "chart"),
   genes = list(name = "Gene", icon = "layers", all = "All genes", section = "genes"),
   labels = list(name = "Gene label", icon = "tag", all = "All gene labels", section = "labels"),
@@ -58,7 +60,8 @@ kind_of <- function(item) {
 }
 # Identified by their row; legend parts by group, other text by cluster and part
 BY_ROW <- c("genes", "labels", "coordinates")
-DRAGGABLE <- c("labels", "title", "clusterTitle", "clusterFooter", "clusterLabel")
+WHOLE_SCALE <- c("scale", "scaleBar")
+DRAGGABLE <- c("labels", "title", "clusterTitle", "clusterFooter", "clusterLabel", WHOLE_SCALE)
 
 # The fields are rebuilt for each element, so they are not registered as
 # settings of the examples (see register_input())
@@ -112,7 +115,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
 
     edit_id <- function(item) compact(list(
       row_id = item$row_id, end = item$end,
-      cluster = if (!is.null(item$part)) item$cluster, part = item$part, group = item$group))
+      cluster = if (!is.null(item$part) || item$component %in% WHOLE_SCALE) item$cluster, part = item$part, group = item$group))
 
     # Each element shown gets a token. Inputs that still come from the fields
     # of the previous element carry its token, and cannot change this one.
@@ -127,7 +130,8 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       if (event$component == "legend") {
         length(event$data) == 1 && !is.na(event$data) &&
           isTRUE(event$part %in% c("label", "marker"))
-      } else if (event$component %in% BY_ROW) !is.null(event$data$rowID) else !is.null(event$part)
+      } else if (event$component %in% WHOLE_SCALE) !is.null(event$cluster)
+      else if (event$component %in% BY_ROW) !is.null(event$data$rowID) else !is.null(event$part)
     }
     open <- function(event, navigate = TRUE) {
       if (!selectable(event)) return(FALSE)
@@ -260,7 +264,9 @@ server_element <- function(id, data_key, open_section, section = function() NULL
           block_button("Reset position", id = ns("resetPosition"), variant = "outline", size = "sm"),
           tags$p(class = "gv-element-hint", "Offset from the configured layout; Reset position keeps other styling.")
         ),
-        if (legend_marker) tags$div(
+        if (item$component %in% WHOLE_SCALE) tags$p(class = "gv-element-hint",
+          "Drag anywhere on the scale to move it as a whole. Appearance settings are in Scale.")
+        else if (legend_marker) tags$div(
           fill(), border(),
           tags$p(class = "gv-element-hint", "These settings change the legend patch. Gene colours are set under Colors.")
         ) else if (gene) tags$div(
@@ -300,7 +306,8 @@ server_element <- function(id, data_key, open_section, section = function() NULL
 
     read_style <- function(item) {
       previous <- isolate(edits()[[key(item)]]$style)
-      style <- if (item$component == "legend" && identical(item$part, "marker")) list(
+      style <- if (item$component %in% WHOLE_SCALE) list()
+      else if (item$component == "legend" && identical(item$part, "marker")) list(
         fill = txt(input$fill), opacity = num(input$opacity),
         stroke = txt(input$stroke), strokeWidth = num(input$strokeWidth),
         strokeDasharray = opt(input$strokeDasharray)
