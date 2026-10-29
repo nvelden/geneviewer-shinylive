@@ -482,9 +482,10 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       item <- isolate(target())
       all <- isolate(edits())
       previous <- all[[key(item)]]$style
-      all[[key(item)]] <- list(component = item$component,
-        id = edit_id(item),
-        style = utils::modifyList(if (is.null(previous)) list() else previous, position))
+      style <- utils::modifyList(if (is.null(previous)) list() else previous, position)
+      # Back where the chart puts it (an undo of its first move): no offset
+      if (style$moveX == 0 && style$moveY == 0) style[c("moveX", "moveY")] <- NULL
+      all[[key(item)]] <- if (length(style)) list(component = item$component, id = edit_id(item), style = style)
       edits(all)
       item$drawn <- utils::modifyList(if (is.null(item$drawn)) list() else item$drawn, position)
       show(item)
