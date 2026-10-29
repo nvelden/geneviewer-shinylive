@@ -437,3 +437,25 @@ test_that("several selected elements share a position and reset together", {
       expect_no_match(as.character(output$fields$html), "elements")
   })
 })
+
+test_that("genes are named by the label column, then a name column in any case, then their row", {
+  label_column <- shiny::reactiveVal("protein_id")
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data-1"), open_section = function(...) NULL,
+                label_column = label_column), {
+      editor <- session$returned
+      # A new row each time: opening the same element again keeps it as it is
+      row <- 0
+      gene <- function(data) {
+        row <<- row + 1
+        editor$open(list(component = "genes", cluster = "A", data = c(list(rowID = row), data)))
+        editor$target()$gene
+      }
+      expect_equal(gene(list(protein_id = "P1", Name = "ophA")), "P1")
+      # An empty label is no name; the name columns follow, in their order
+      expect_equal(gene(list(protein_id = "", Product = "kinase", Name = "ophA")), "ophA")
+      label_column(NULL)
+      expect_equal(gene(list(protein_id = "P1", GENE = "ophB")), "ophB")
+      expect_null(gene(list(protein_id = "P1")))
+    })
+})

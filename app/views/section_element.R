@@ -104,8 +104,27 @@ color_input <- function(ns, name, label, value) {
     color_swatches(ns(name), label, pick))
 }
 
+# Columns that usually name a gene, in order; matched in any case
+NAME_COLUMNS <- c("name", "label", "gene", "locus_tag", "product")
+
+# The name of a gene (a row of the data) for the element card: its value in
+# the chart's label column, else in the first name column that has one
+gene_name <- function(gene, label_column = NULL) {
+  if (!is.list(gene) || is.null(names(gene))) return(NULL)
+  columns <- names(gene)
+  # The label column exactly as chosen; the name columns in any case, in order
+  by_name <- columns[tolower(columns) %in% NAME_COLUMNS]
+  by_name <- by_name[order(match(tolower(by_name), NAME_COLUMNS))]
+  for (column in c(intersect(label_column, columns), by_name)) {
+    value <- gene[[column]]
+    if (length(value) == 1 && !is.na(value) && nzchar(as.character(value))) return(as.character(value))
+  }
+  NULL
+}
+
 #' @export
-server_element <- function(id, data_key, open_section, section = function() NULL) {
+server_element <- function(id, data_key, open_section, section = function() NULL,
+                           label_column = function() NULL) {
   moduleServer(id, function(input, output, session) {
     edits <- reactiveVal(list())
     target <- reactiveVal(NULL)
@@ -140,16 +159,14 @@ server_element <- function(id, data_key, open_section, section = function() NULL
     # What the section keeps of a selected element
     as_item <- function(event) {
       by_row <- event$component %in% BY_ROW
-      # The first column that names the gene (of a coordinate), for the card
+      # The gene (of a coordinate), named for the card
       gene <- if (event$component == "legend") NULL else if (event$component == "coordinates") event$data$gene else event$data
-      gene <- gene[intersect(c("name", "label", "gene", "locus_tag", "product"), names(gene))]
-      gene <- Filter(function(x) length(x) == 1 && !is.na(x) && nzchar(x), gene)
       list(component = event$component, cluster = event$cluster,
            row_id = if (by_row) event$data$rowID,
            end = if (event$component == "coordinates") event$data$end,
            part = if (!by_row) event$part,
            group = if (event$component == "legend") event$data,
-           gene = if (length(gene)) as.character(gene[[1]]),
+           gene = gene_name(gene, isolate(label_column())),
            drawn = event$style)
     }
     open <- function(event, navigate = TRUE) {

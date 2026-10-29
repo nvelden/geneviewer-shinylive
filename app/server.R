@@ -275,7 +275,9 @@ function(input, output, session) {
   }
   element_editor <- server_element("element", data_key = reactive(list(
     r$cluster_data, mapping()[c("start", "end", "cluster", "order", "group")]
-  )), open_section = open_section, section = reactive(input$section))
+  )), open_section = open_section, section = reactive(input$section),
+     # Genes on the element card are named by the chart's label column
+     label_column = reactive(label_inputs()$args$label))
   click_sections <- list(
     transcript = "genes", coordinates = "coordinates", links = "links", legend = "legend",
     sequence = "sequence",
