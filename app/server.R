@@ -217,6 +217,9 @@ function(input, output, session) {
   load_token <- 0
   load_dataset <- function(data, values, keep = FALSE) {
     load_token <<- load_token + 1
+    # Reactive, so that every load draws the chart again with its token, also
+    # one that leaves the data as it was (a file uploaded a second time)
+    r$load_token <- load_token
     session$sendCustomMessage("gv-loading", list(token = load_token))
     current <- if (keep) isolate(reactiveValuesToList(input)) else defaults
     targets <- sapply(ls(INPUT_TYPES), function(id) {
@@ -362,7 +365,7 @@ function(input, output, session) {
     })
     if (is.null(chart)) {
       # No chart: tell the browser the load is over, so it lifts the cover
-      session$sendCustomMessage("gv-loaded", list(token = load_token))
+      session$sendCustomMessage("gv-loaded", list(token = r$load_token))
       req(FALSE)
     }
 
@@ -409,7 +412,7 @@ function(input, output, session) {
     # App interaction and loading events are not part of the exported code.
     chart <- add(chart, "GC_events", list(
       click = TRUE, highlight = TRUE, dblclick = TRUE, select = TRUE, drag = TRUE,
-      rendered = TRUE, render_id = load_token
+      rendered = TRUE, render_id = r$load_token
     ), record = FALSE)
 
     if (alignment$align && !is.null(alignment$id)) {
