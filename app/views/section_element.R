@@ -581,6 +581,9 @@ server_element <- function(id, data_key, open_section, section = function() NULL
 
     list(open = open, open_group = open_group, move = move, place = place, selectable = selectable,
          clear = function() { target(NULL); group(NULL) },
-         edits = function() unname(edits()), target = target)
+         edits = function() unname(edits()), target = target,
+         # The edits by their keys, for a project file, and back
+         saved = function() isolate(edits()),
+         restore = function(saved) { target(NULL); group(NULL); edits(saved) })
   })
 }

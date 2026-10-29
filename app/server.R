@@ -13,6 +13,7 @@ box::use(
   ./logic/utils[make_named_color_list, order_cluster_data, cluster_values, opt],
   ./logic/code_gen[chart_code, data_code],
   ./logic/examples[EXAMPLES],
+  ./logic/project[write_project, read_project],
   ./logic/ui_helpers[INPUT_TYPES, COLOR_INPUTS, NONE],
   ./views/section_data[column_choices],
 )
@@ -255,7 +256,61 @@ function(input, output, session) {
     load_dataset(data, values)
   }, ignoreInit = TRUE)
 
-  server_data("data", r = r, toaster_id = "toasts", load_dataset = load_dataset)
+  # Projects ---------------------------------------------------------------
+
+  # A project holds the data, alignment, settings and element edits. The
+  # browser saves it as a file; dropped on the upload, it opens again.
+  observeEvent(input[["data-saveProject"]], {
+    req(is.null(r$pending), is.null(r$restore))
+    settings <- isolate(reactiveValuesToList(input))
+    upload <- is.call(r$link_code)
+    json <- write_project(
+      data = r$cluster_data,
+      settings = sapply(ls(INPUT_TYPES), function(id) settings[[id]], simplify = FALSE),
+      edits = element_editor$saved(),
+      links = if (!is.null(r$link_data)) list(data = r$link_data, name = r$link_name, upload = upload),
+      source = list(name = r$source_name, example = r$example, files = r$source_files)
+    )
+    name <- tools::file_path_sans_ext(r$source_name %||% "geneviewer")
+    name <- gsub("[^A-Za-z0-9._-]+", "_", name)
+    session$sendCustomMessage("gv-download", list(
+      name = paste0(name, ".geneviewer.json"), content = as.character(json),
+      type = "application/json"
+    ))
+  })
+
+  # Open a project: its data and settings load as a dataset does. Loading
+  # data clears the element edits and an uploaded alignment, so those are
+  # put back once the settings have arrived, before the chart is drawn.
+  open_project <- function(path, file_name) {
+    project <- read_project(path)
+    example <- project$source$example
+    if (!isTRUE(example %in% names(EXAMPLES))) example <- "project"
+    r$source_files <- project$source$files
+    r$example <- example
+    r$source_name <- project$source$name %||% file_name
+    r$link_data <- NULL
+    r$link_code <- NULL
+    r$link_name <- NULL
+    r$restore <- list(edits = project$edits, links = project$links)
+    load_dataset(project$data, project$settings)
+  }
+
+  observeEvent(r$pending, {
+    req(is.null(r$pending), !is.null(r$restore))
+    links <- r$restore$links
+    if (!is.null(links)) {
+      r$link_data <- links$data
+      r$link_name <- links$name
+      r$link_code <- if (links$upload) call("read.csv", links$name, stringsAsFactors = FALSE)
+                     else EXAMPLES[[r$example]]$link_code
+    }
+    element_editor$restore(r$restore$edits)
+    r$restore <- NULL
+  }, ignoreNULL = FALSE, priority = -100)
+
+  server_data("data", r = r, toaster_id = "toasts", load_dataset = load_dataset,
+              open_project = open_project)
 
   # The marker goes last: this observer runs after all others of the flush,
   # also after the pickers that refill with the new data
@@ -452,12 +507,12 @@ function(input, output, session) {
 
   # While the settings of a load arrive, keep the chart and code that are shown
   output$gcChart <- geneviewer::renderGC_chart({
-    req(is.null(r$pending), cancelOutput = TRUE)
+    req(is.null(r$pending), is.null(r$restore), cancelOutput = TRUE)
     chart()$widget
   })
 
   output$chartCode <- renderUI({
-    req(is.null(r$pending), cancelOutput = TRUE)
+    req(is.null(r$pending), is.null(r$restore), cancelOutput = TRUE)
     shinyblocks::block_code(chart()$code, language = "r", line_numbers = FALSE)
   })
 }

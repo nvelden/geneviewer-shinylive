@@ -47,13 +47,22 @@ ui_data <- function(id, data) {
         variant = "dropzone",
         multiple = TRUE,
         append = TRUE,
-        accept = c(".csv", ".gbk", ".gb"),
+        accept = c(".csv", ".gbk", ".gb", ".json"),
         dropzone_icon = "upload",
         dropzone_label = "Drop files or click to upload",
-        dropzone_hint = "CSV, or GenBank files with one cluster each. Drop more to add them."
+        dropzone_hint = paste("CSV, or GenBank files with one cluster each. Drop more to add them.",
+                              "Drop a saved project (.json) to open it.")
       ),
-      tags$a(class = "gv-button-outline", href = "gene_cluster_example.csv", download = NA,
-             block_icon("download", size = "sm"), "Example CSV")
+      tags$div(
+        class = "gv-dataset-actions",
+        tags$a(class = "gv-button-outline", href = "gene_cluster_example.csv", download = NA,
+               block_icon("download", size = "sm"), "Example CSV"),
+        tags$button(type = "button", class = "gv-button-outline",
+                    title = "Save the data, settings and edits, to open the chart again later",
+                    onclick = sprintf("Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+                                      ns("saveProject")),
+                    block_icon("save", size = "sm"), "Save project")
+      )
     ),
     field_group(
       "Columns",
@@ -74,7 +83,7 @@ ui_data <- function(id, data) {
 }
 
 #' @export
-server_data <- function(id, r, toaster_id, load_dataset) {
+server_data <- function(id, r, toaster_id, load_dataset, open_project) {
   moduleServer(id, function(input, output, session) {
 
     # Offer the examples that are not loaded; uploaded data offers all
@@ -132,6 +141,23 @@ server_data <- function(id, r, toaster_id, load_dataset) {
 
     observeEvent(input$files, {
       req(input$files)
+      # A project replaces the chart; the last one dropped is opened
+      projects <- tolower(tools::file_ext(input$files$name)) == "json"
+      if (any(projects)) {
+        file <- input$files[max(which(projects)), ]
+        update_block_file_input(session, "files", reset = TRUE)
+        tryCatch({
+          open_project(file$datapath, file$name)
+          show_toast(session = session$rootScope(), toaster_id = toaster_id,
+                     title = "Project opened", description = file$name,
+                     variant = "success", icon = "check-circle")
+        }, error = function(e) {
+          show_toast(session = session$rootScope(), toaster_id = toaster_id,
+                     title = "Could not open the project", description = conditionMessage(e),
+                     variant = "destructive", icon = "alert-circle", duration = 8000)
+        })
+        return()
+      }
       tryCatch({
         data <- load_gene_data(input$files)
         # Files dropped on an upload are added to it (the input appends), and

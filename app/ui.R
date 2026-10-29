@@ -125,7 +125,7 @@ ui <- block_page(
     )
   ),
   tags$head(
-    tags$link(rel = "stylesheet", href = "app.css?v=20261027-scope"),
+    tags$link(rel = "stylesheet", href = "app.css?v=20261029-project"),
     tags$link(rel = "icon", type = "image/png", sizes = "16x16", href = "favicon-16x16.png"),
     tags$link(rel = "apple-touch-icon", href = "apple-touch-icon.png"),
     # Picking a section, or clicking a part of the chart, opens the settings
@@ -158,6 +158,17 @@ ui <- block_page(
       Shiny.addCustomMessageHandler('gv-loading', function (message) {
         gvLoading = message.token;
         document.getElementById('gv-loading').hidden = false;
+      });
+      // Save a file the server made, such as a project
+      Shiny.addCustomMessageHandler('gv-download', function (message) {
+        var url = URL.createObjectURL(new Blob([message.content], {type: message.type}));
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = message.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
       });
       Shiny.addCustomMessageHandler('gv-loaded', function (message) {
         gvLoaded(message.token);
