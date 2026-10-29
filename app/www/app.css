@@ -511,7 +511,13 @@
   margin-top: 0.375rem;
 }
 
-/* Selection: one gene or label styled on its own */
+/* Element: one gene or label styled on its own */
+
+/* With an element selected, its card and the switch above say what is
+   edited: the section header shows only while nothing is selected */
+.gv-inspector-panel:has(#element-fields .gv-element-top) > .gv-inspector-header {
+  display: none;
+}
 .gv-element-top {
   display: flex;
   flex-direction: column;
@@ -553,6 +559,18 @@
 
 .gv-element-count {
   font-size: 0.75rem;
+}
+
+/* Short fields two by two, labels above, e.g. right and down */
+.gv-field-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.gv-field-pair > .gv-field.gv-field-stacked > .sb-field-label {
+  color: var(--muted-foreground);
+  font-weight: 400;
 }
 
 .gv-element-reset {
@@ -648,4 +666,4 @@
   cursor: pointer;
 }
 
-.gv-edit-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+

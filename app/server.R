@@ -264,9 +264,10 @@ function(input, output, session) {
     if (identical(input$gvMarker, as.character(r$pending$token))) r$pending <- NULL
   })
 
-  # Click to edit: a click on a gene or label opens it in the Selection
-  # section, a click on another part of the chart opens its settings. Legend
-  # labels and markers are edited individually; viewing mode toggles groups.
+  # A click on a gene or label opens it in the Element section, a click on
+  # another part of the chart opens its settings. Legend labels and markers
+  # are edited individually. Dragging moves text and scales; it never opens
+  # an editor of its own (the widget tells a click from a drag).
   open_section <- function(section, tab = NULL) {
     shinyblocks::update_block_nav(session, "section", selected = section)
     if (!is.null(tab)) shinyblocks::update_block_tabs(session, paste0(section, "-tab"), selected = tab)
@@ -285,32 +286,26 @@ function(input, output, session) {
   # Elements that can be selected follow the selection (below), so a second
   # click on one, which ends its selection, does not open it again
   observeEvent(input$gcChart_click, {
-    req(isTRUE(input$editMode), !element_editor$selectable(input$gcChart_click))
+    req(!element_editor$selectable(input$gcChart_click))
     target <- click_sections[[input$gcChart_click$component %||% ""]]
     req(target)
     open_section(target[[1]], if (length(target) == 2) target[[2]])
   })
-  observeEvent(input$gcChart_drag, {
-    req(isTRUE(input$editMode), isTRUE(input$dragMode))
-    element_editor$move(input$gcChart_drag)
-  })
-  observeEvent(input$editMode, {
-    shinyblocks::update_block_switch(session, "dragMode", disabled = !isTRUE(input$editMode), notify = FALSE)
-  })
+  observeEvent(input$gcChart_drag, element_editor$move(input$gcChart_drag))
+  # The chart's reset, or undoing or redoing it, moves several elements at once
+  observeEvent(input$gcChart_moves, element_editor$place(input$gcChart_moves$moves))
   # Enter on a selectable element that has keyboard focus
-  observeEvent(input$gcChart_dblclick, {
-    req(isTRUE(input$editMode))
-    element_editor$open(input$gcChart_dblclick)
-  })
+  observeEvent(input$gcChart_dblclick, element_editor$open(input$gcChart_dblclick))
+  # Several selected elements (Shift-click or a box in the chart) are edited
+  # together; one selected element as below
+  observeEvent(input$gcChart_selection, element_editor$open_group(input$gcChart_selection),
+               ignoreNULL = FALSE, ignoreInit = TRUE)
   # Selecting an element opens it; a second click on it, a click elsewhere
   # or Escape ends the selection
   observeEvent(input$gcChart_select, {
     if (is.null(input$gcChart_select)) element_editor$clear()
-    else if (isTRUE(input$editMode)) element_editor$open(input$gcChart_select, navigate = FALSE)
+    else element_editor$open(input$gcChart_select, navigate = FALSE)
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
-  observeEvent(input$editMode, {
-    if (!isTRUE(input$editMode)) element_editor$clear()
-  })
 
   # The chart and its code
   chart <- reactive({
@@ -411,9 +406,7 @@ function(input, output, session) {
     }
     # App interaction and loading events are not part of the exported code.
     chart <- add(chart, "GC_events", list(
-      click = isTRUE(input$editMode), highlight = isTRUE(input$editMode),
-      dblclick = isTRUE(input$editMode), select = isTRUE(input$editMode),
-      drag = isTRUE(input$editMode) && isTRUE(input$dragMode),
+      click = TRUE, highlight = TRUE, dblclick = TRUE, select = TRUE, drag = TRUE,
       rendered = TRUE, render_id = load_token
     ), record = FALSE)
 
@@ -433,7 +426,7 @@ function(input, output, session) {
       }
     }
 
-    # Styles of single genes and labels (the Selection section)
+    # Styles of single genes and labels (the Element section)
     for (edit in element_editor$edits()) {
       chart <- add(chart, "GC_element_style", c(list(component = edit$component), edit$id, edit$style))
     }

@@ -60,12 +60,12 @@ With the current development versions of geneviewer and shinyblocks installed, r
 Needs a development version of **geneviewer** that exports `GC_element_style()`
 and supports `GC_events(select = TRUE)`.
 
-With **Click to edit** on, clicking a gene, gene label, coordinate, cluster
-text, legend label or legend marker selects it and opens **Selection**.
+Clicking a gene, gene label, coordinate, cluster text, legend label or legend
+marker selects it and opens **Element**; clicking another part of the chart
+opens its settings.
 The editor fills its fields with the current values. Only changed fields become
 individual overrides; clearing a field restores the chart settings. Legend
 patch edits affect the patch, while gene colours are configured under **Colors**.
-With editing off, legend clicks hide or show the matching genes.
 
 Changes apply right away and are added to the R code as `GC_element_style()`
 calls. **Reset** removes the element's own style. **Reset all**, shown when
@@ -79,14 +79,17 @@ label or marker part. Loading different data, changing coordinate, cluster or
 group columns, or changing cluster order clears edits. Replaying exported code
 requires the same input rows in the same order.
 
-**Drag elements** is off by default and available while **Click to edit** is on.
-Enable it to move gene labels, chart titles/subtitles and cluster titles, footers
-and labels, or move a whole numbered axis or scale bar by dragging its line,
-ticks or text. Text can cross cluster and title-area boundaries while retaining
+Dragging needs no mode: a press that moves more than a few pixels is a drag,
+anything else is a click. Drag gene labels, chart titles/subtitles and cluster
+titles, footers and labels, or a whole numbered axis or scale bar by its line,
+ticks or text. With one selected, the arrow keys nudge it by a pixel (Shift: 10). Text can cross cluster and title-area boundaries while retaining
 its original element identity. Position fields preview the movement; releasing saves pixel offsets
 in the generated code. Escape cancels the current move. **Reset position** clears
-only the drag offsets, retaining text, font, colour and rotation. Turning dragging
-off keeps click editing available.
+only the drag offsets, retaining text, font, colour and rotation.
+
+The chart's undo, redo and reset icons, next to its download icon, undo and
+redo moves and move every element back at once (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z).
+geneviewer reports them like drags, a reset as one `input$gcChart_moves`.
 
 Gene-label settings appear when **Show gene labels** is on. Choosing a valid
 label column enables labels; turning them off retains the chosen column.

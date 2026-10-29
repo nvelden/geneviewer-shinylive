@@ -84,9 +84,9 @@ test_that("labels can be renamed, hidden and resized", {
       session$flushReact()
       editor <- session$returned
       editor$open(list(component = "labels", cluster = "A", data = list(rowID = 2)))
-      session$setInputs(token = "1", text = "New", fontSize = "16", fontFamily = "serif", dx = "3")
+      session$setInputs(token = "1", text = "New", fontSize = "16", fontFamily = "serif", rotate = "3")
       expect_equal(editor$edits()[[1]]$style,
-                   list(text = "New", fontSize = "16px", fontFamily = "serif", dx = 3))
+                   list(text = "New", fontSize = "16px", fontFamily = "serif", rotate = 3))
       session$setInputs(hide = TRUE)
       expect_identical(editor$edits()[[1]]$style$text, "")
   })
@@ -249,7 +249,7 @@ test_that("all reported values populate fields without pinning unchanged styles"
       session$flushReact()
       session$setInputs(token = "2", text = "Gene A", fill = "#000000", fontSize = "12",
         fontWeight = "normal", fontStyle = "normal", fontFamily = "Times New Roman",
-        dx = "3", dy = "4", rotate = "10")
+        rotate = "10")
       expect_length(editor$edits(), 1)
       session$setInputs(text = "Renamed")
       expect_equal(editor$edits()[[2]]$style, list(text = "Renamed"))
@@ -258,7 +258,7 @@ test_that("all reported values populate fields without pinning unchanged styles"
   })
 })
 
-test_that("dragging text preserves styles and reset position removes only drag offsets", {
+test_that("dragging text preserves styles and clearing the position removes only drag offsets", {
   shiny::testServer(section_element$server_element,
     args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
       session$flushReact()
@@ -272,9 +272,9 @@ test_that("dragging text preserves styles and reset position removes only drag o
       expect_equal(editor$edits()[[1]]$id, list(part = "title"))
       expect_equal(editor$edits()[[1]]$style,
         list(fill = "red", fontStyle = "italic", moveX = 25, moveY = -10))
-      session$setInputs(resetPosition = 1)
+      # Clearing both fields keeps the other styling
+      session$setInputs(token = editor$target()$token, moveX = "", moveY = "")
       expect_equal(editor$edits()[[1]]$style, list(fill = "red", fontStyle = "italic"))
-      expect_equal(editor$target()$drawn$moveX, 0)
       event$component <- "genes"
       event$data <- list(rowID = 1)
       expect_false(editor$move(event))
@@ -287,6 +287,40 @@ test_that("dragging text preserves styles and reset position removes only drag o
       event$position <- list(moveX = 10, moveY = 5)
       expect_true(editor$move(event))
       expect_equal(tail(editor$edits(), 1)[[1]]$id, list(row_id = 1))
+  })
+})
+
+test_that("elements moved together by the chart keep their other styles", {
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
+      session$flushReact()
+      editor <- session$returned
+      styles <- function() lapply(editor$edits(), `[[`, "style")
+      title <- list(component = "title", part = "title", style = list(text = "Chart", moveX = 0, moveY = 0))
+      editor$open(title)
+      session$flushReact()
+      session$setInputs(token = "1", fill = "red")
+      # Whole pixels arrive as integers; the rebuilt fields send them back as doubles
+      title$position <- list(moveX = 25L, moveY = -10L)
+      editor$move(title)
+      session$flushReact()
+      session$setInputs(token = editor$target()$token, moveX = "25", moveY = "-10")
+      expect_identical(styles(), list(list(fill = "red", moveX = 25, moveY = -10)))
+      label <- list(component = "labels", cluster = "A", data = list(rowID = 1),
+                    style = list(moveX = 0, moveY = 0), position = list(moveX = 5, moveY = 5))
+      editor$move(label)
+      session$flushReact()
+      # The chart's reset: elements back where the chart puts them keep no offset
+      title$position <- list(moveX = 0L, moveY = 0L)
+      label$position <- list(moveX = 0, moveY = 0)
+      editor$place(list(title, label, list(component = "genes", data = list(rowID = 1),
+                                           position = list(moveX = 1, moveY = 1))))
+      expect_equal(styles(), list(list(fill = "red")))
+      expect_equal(editor$target()$drawn$moveX, 0)
+      # Undoing it puts the offsets back
+      label$position <- list(moveX = 5, moveY = 5)
+      editor$place(list(label))
+      expect_equal(styles()[[2]], list(moveX = 5, moveY = 5))
   })
 })
 
@@ -345,9 +379,61 @@ for (component in c("scale", "scaleBar")) test_that(paste(component, "moves as a
       expect_equal(chart$x$series$A[[component]]$itemStyle, list(event$position))
       expect_null(chart$x$series$B[[component]]$itemStyle)
       session$flushReact()
-      session$setInputs(resetPosition = 1)
+      session$setInputs(token = editor$target()$token, moveX = "", moveY = "")
       expect_length(editor$edits(), 0)
-      expect_equal(editor$target()$drawn$moveX, 0)
-      expect_equal(editor$target()$drawn$moveY, 0)
     })
+})
+
+test_that("legend labels and markers keep their own drag offsets", {
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
+      session$flushReact()
+      editor <- session$returned
+      marker <- list(component = "legend", data = "A", part = "marker",
+                     style = list(fill = "#1f77b4", moveX = 0, moveY = 0), position = list(moveX = 12L, moveY = -4L))
+      expect_true(editor$move(marker))
+      label <- list(component = "legend", data = "A", part = "label",
+                    style = list(text = "A", moveX = 0, moveY = 0), position = list(moveX = 3, moveY = 8))
+      expect_true(editor$move(label))
+      edits <- editor$edits()
+      expect_equal(lapply(edits, `[[`, "id"), list(list(part = "marker", group = "A"), list(part = "label", group = "A")))
+      expect_identical(lapply(edits, `[[`, "style"), list(list(moveX = 12, moveY = -4), list(moveX = 3, moveY = 8)))
+      chart <- geneviewer::GC_chart(data.frame(start = 1, end = 20, group = "A"), group = "group")
+      for (edit in edits) chart <- do.call(geneviewer::GC_element_style, c(list(chart, component = "legend"), edit$id, edit$style))
+      expect_length(chart$x$legend$itemStyle, 2)
+  })
+})
+
+test_that("several selected elements share a position and reset together", {
+  shiny::testServer(section_element$server_element,
+    args = list(data_key = shiny::reactiveVal("data"), open_section = function(s, tab = NULL) NULL), {
+      session$flushReact()
+      editor <- session$returned
+      label <- function(row, x, y) list(component = "labels", cluster = "A", data = list(rowID = row),
+                                        style = list(text = "Gene", moveX = x, moveY = y))
+      gene <- list(component = "genes", cluster = "A", data = list(rowID = 3), style = list(fill = "red"))
+      # Down differs, Right is shared; the gene cannot move
+      editor$move(c(label(1, 0, 0), list(position = list(moveX = 5, moveY = 2))))
+      editor$move(c(label(2, 0, 0), list(position = list(moveX = 5, moveY = 9))))
+      expect_true(editor$open_group(list(label(1, 5, 2), label(2, 5, 9), gene)))
+      session$flushReact()
+      html <- as.character(output$fields$html)
+      expect_match(html, "3 elements")
+      expect_match(html, '"placeholder":"Mixed"', fixed = TRUE)
+      token <- regmatches(html, regexpr('(?<=groupToken" type="text" class="shiny-input-text form-control" value=")[0-9]+', html, perl = TRUE))
+      # The fields' first values change nothing
+      # An empty number field sends NA
+      session$setInputs(groupToken = token, groupMoveX = 5, groupMoveY = NA_real_)
+      expect_equal(lapply(editor$edits(), `[[`, "style"), list(list(moveX = 5, moveY = 2), list(moveX = 5, moveY = 9)))
+      # Right for all of them; Down stays as it was for each
+      session$setInputs(groupMoveX = "12")
+      expect_equal(lapply(editor$edits(), `[[`, "style"), list(list(moveX = 12, moveY = 2), list(moveX = 12, moveY = 9)))
+      expect_length(editor$edits(), 2)
+      session$setInputs(groupReset = 1)
+      expect_length(editor$edits(), 0)
+      # One element is not a group
+      expect_false(editor$open_group(list(label(1, 0, 0))))
+      session$flushReact()
+      expect_no_match(as.character(output$fields$html), "elements")
+  })
 })

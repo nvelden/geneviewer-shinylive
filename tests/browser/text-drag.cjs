@@ -26,15 +26,24 @@ const assert = require('node:assert/strict');
     const n=document.querySelector(selector);n.getBoundingClientRect();return n.getNumberOfChars()>0;
    },{},selector);
    const enabled=await page.$eval('#gcChart',n=>n.classList.contains('geneviewer-draggable'));
-   await page.$eval(selector,n=>{window.dragTestOriginal=n});
-   const point=await page.$eval(selector,n=>{
-    for(let i=0;i<n.getNumberOfChars();i++) {
-     const r=n.getExtentOfChar(i);
-     const p=new DOMPoint(r.x+r.width/2,r.y+r.height/2).matrixTransform(n.getScreenCTM());
-     if(document.elementFromPoint(p.x,p.y)?.closest('text')===n) return {x:p.x,y:p.y};
+   // A redraw can replace the text while it is looked up; look again
+   let point;
+   for(let tries=0;!point;tries++) {
+    try {
+     await page.$eval(selector,n=>{window.dragTestOriginal=n});
+     point=await page.$eval(selector,n=>{
+      for(let i=0;i<n.getNumberOfChars();i++) {
+       const r=n.getExtentOfChar(i);
+       const p=new DOMPoint(r.x+r.width/2,r.y+r.height/2).matrixTransform(n.getScreenCTM());
+       if(document.elementFromPoint(p.x,p.y)?.closest('text')===n) return {x:p.x,y:p.y};
+      }
+      throw new Error('No visible text character for '+n.textContent);
+     });
+    } catch(error) {
+     if(tries>9) throw error;
+     await new Promise(resolve=>setTimeout(resolve,300));
     }
-    throw new Error('No visible text character for '+n.textContent);
-   });
+   }
    await page.evaluate(()=>{
     window.lastDragDown=null;
     document.addEventListener('pointerdown',event=>{
@@ -50,13 +59,22 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(selector=>document.querySelector(selector)!==window.dragTestOriginal,{timeout:15000},selector);
    }
   };
-  assert.equal(await page.$eval('#gcChart',n=>n.classList.contains('geneviewer-draggable')),false);
-  await drag(label,20,10);
-  assert.equal((await drawn(label)).moveX,0);
-  await page.click('[data-sb-input-id="dragMode"] [role="switch"]');
+  // Clearing both position fields moves the element back, keeping its style
+  const clearPosition=async()=>{
+   for(const name of ['moveX','moveY']) {
+    const field=`[data-sb-input-id="element-${name}"] input:not([data-shiny-no-bind-input])`;
+    await page.waitForSelector(field,{visible:true});
+    await page.click(field,{clickCount:3});await page.keyboard.press('Backspace');await page.keyboard.press('Tab');
+   }
+   await page.waitForFunction(()=>{const d=document.querySelector('#gcChart text.label[rowID="1"]').__drawn__;return d.moveX===0&&d.moveY===0;});
+  };
+  // Clicking and dragging are always on; the widget tells them apart.
   await page.waitForFunction(()=>document.querySelector('#gcChart').classList.contains('geneviewer-draggable'));
-  await page.click(label);
-  await page.waitForSelector('[data-sb-input-id="element-fill"] input',{visible:true});
+  // The chart may still redraw with the settings above
+  for(let tries=0;;tries++) {
+   try { await page.click(label); await page.waitForSelector('[data-sb-input-id="element-fill"] input',{visible:true,timeout:3000}); break; }
+   catch(error) { if(tries>4) throw error; }
+  }
   await page.click('#element-fields .gv-swatch[title="#d62728"]');
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#gcChart text.label[rowID="1"]')).fill==='rgb(214, 39, 40)');
   await drag(label,26,14);
@@ -66,7 +84,7 @@ const assert = require('node:assert/strict');
   await page.waitForFunction(()=>Number(document.querySelector('[data-sb-input-id="element-moveX"] input')?.value)>25);
   await drag(label,15,9,true);
   assert.ok(Math.abs((await drawn(label)).moveX-26)<1);
-  await page.click('[data-sb-input-id="element-resetPosition"] button');
+  await clearPosition();
   await page.waitForFunction(()=>document.querySelector('#gcChart text.label[rowID="1"]').__drawn__.moveX===0);
   assert.equal(await page.$eval(label,n=>getComputedStyle(n).fill),'rgb(214, 39, 40)');
   // Rotation and CSS scaling do not change the direction or saved SVG offsets.
@@ -81,14 +99,9 @@ const assert = require('node:assert/strict');
   assert.ok(Math.abs((await drawn(label)).moveX-20)<1);
   assert.ok(Math.abs((await drawn(label)).moveY-10)<1);
   await page.$eval('#gcChart',n=>{n.style.transform='';n.style.transformOrigin=''});
-  await page.click('[data-sb-input-id="element-resetPosition"] button');
+  await clearPosition();
   await page.waitForFunction(()=>document.querySelector('#gcChart text.label[rowID="1"]').__drawn__.moveX===0);
   assert.equal((await drawn(label)).rotate,30);
-  await page.click('[data-sb-input-id="dragMode"] [role="switch"]');
-  await page.waitForFunction(()=>!document.querySelector('#gcChart').classList.contains('geneviewer-draggable'));
-  await drag(label,20,8); assert.equal((await drawn(label)).moveX,0);
-  await page.click('[data-sb-input-id="dragMode"] [role="switch"]');
-  await page.waitForFunction(()=>document.querySelector('#gcChart').classList.contains('geneviewer-draggable'));
   const selectors=[title,'#gcChart [data-component="title"] [data-part="subtitle"]',
    '#gcChart :is([data-cluster="ophA"] [data-component="clusterTitle"], [data-cluster="ophA"][data-component="clusterTitle"]) [data-part="title"]',
    '#gcChart [data-cluster="ophA"] text[data-component="clusterFooter"][data-part="subtitle"]',
@@ -113,10 +126,34 @@ const assert = require('node:assert/strict');
   }
   await page.setViewport({width:1500,height:1200});
   await page.waitForFunction(()=>document.querySelector('#gcChart [data-component="title"] [data-part="title"]').__drawn__.moveX>11);
-  await page.click('[data-sb-input-id="editMode"] [role="switch"]');
-  await page.waitForFunction(()=>!document.querySelector('#gcChart').classList.contains('geneviewer-draggable'));
-  assert.equal(await page.$eval('[data-sb-input-id="dragMode"] [role="switch"]',n=>n.disabled),true);
+  // The chart's undo, redo and reset; the reset is one step for all moved
+  // elements, reported once, and can be undone.
+  const titleMoveX=()=>page.$eval('#gcChart [data-component="title"] [data-part="title"]',n=>n.__drawn__.moveX);
+  await page.hover('#gcChart');
+  await page.waitForSelector('#gcChart .geneviewer-history:not([hidden])',{visible:true});
+  assert.equal(await page.$eval('#gcChart .geneviewer-redo',n=>n.disabled),true);
+  await page.click('#gcChart .geneviewer-undo');
+  await page.waitForFunction(()=>Shiny.shinyapp.$inputValues.gcChart_drag?.action==='undo');
+  await page.waitForSelector('#gcChart .geneviewer-redo:not([disabled])');
+  await page.keyboard.down('Meta');await page.keyboard.down('Shift');await page.keyboard.press('z');
+  await page.keyboard.up('Shift');await page.keyboard.up('Meta');
+  await page.waitForFunction(()=>Shiny.shinyapp.$inputValues.gcChart_drag?.action==='redo');
+  await page.waitForFunction(()=>document.querySelector('#gcChart [data-component="title"] [data-part="title"]').__drawn__.moveX>11);
+  await page.hover('#gcChart .geneviewer-reset');
+  await page.click('#gcChart .geneviewer-reset');
+  await page.waitForFunction(()=>Shiny.shinyapp.$inputValues.gcChart_moves?.action==='reset');
+  await page.waitForFunction(()=>!/moveX|moveY/.test(document.querySelector('#chartCode').textContent));
+  await page.waitForFunction(()=>document.querySelector('#gcChart [data-component="title"] [data-part="title"]').__drawn__.moveX===0);
+  await page.waitForFunction(()=>document.querySelector('#gcChart .geneviewer-reset').disabled);
+  await page.hover('#gcChart .geneviewer-undo');
+  await page.click('#gcChart .geneviewer-undo');
+  await page.waitForFunction(()=>document.querySelector('#gcChart [data-component="title"] [data-part="title"]').__drawn__.moveX>11);
+  await page.waitForFunction(()=>/moveX/.test(document.querySelector('#chartCode').textContent));
+  await page.hover('#gcChart .geneviewer-redo');
+  await page.click('#gcChart .geneviewer-redo');
+  await page.waitForFunction(()=>document.querySelector('#gcChart [data-component="title"] [data-part="title"]').__drawn__.moveX===0);
+  assert.equal(await titleMoveX(),0);
   assert.deepEqual(errors,[]);
-  console.log('text drag browser test passed: opt-in, labels, chart/cluster text, cancellation, persistence, position-only reset and disable');
+  console.log('text drag browser test passed: labels, chart/cluster text, cancellation, persistence, position-only reset, reset positions and undo');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

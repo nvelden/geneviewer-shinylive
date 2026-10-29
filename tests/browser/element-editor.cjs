@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
  const section=()=>page.evaluate(()=>Shiny.shinyapp.$inputValues.section);
  const code=()=>page.evaluate(()=>document.querySelector('#chartCode')?.textContent || '');
 
- // One click selects a gene and opens it in the Selection section.
+ // One click selects a gene and opens it in the Element section.
  await page.click('#gcChart .gene');
  await page.waitForFunction(()=>Shiny.shinyapp.$inputValues.section==='element');
  await page.waitForSelector('[data-sb-input-id="element-fill"] input',{visible:true});
@@ -60,16 +60,6 @@ const assert=require('node:assert/strict');
  await page.waitForFunction(()=>Shiny.shinyapp.$inputValues.section==='element');
  await page.click('[data-sb-input-id="element-reset"] button');
  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#gcChart .legend-marker')).fill!=='rgb(44, 160, 44)');
- // Viewing mode keeps legend visibility toggles, including across a redraw.
- await page.evaluate(()=>Shiny.setInputValue('editMode',false,{priority:'event'}));
- await page.waitForFunction(()=>!document.querySelector('#gcChart').classList.contains('geneviewer-selectable'));
- await page.click('#gcChart .legend-label');
- await page.waitForFunction(()=>document.querySelectorAll('#gcChart .legend.unselected').length===1);
- await page.click('#gcChart .legend-marker');
- await page.waitForFunction(()=>document.querySelectorAll('#gcChart .legend.unselected').length===0);
- await page.evaluate(()=>Shiny.setInputValue('editMode',true,{priority:'event'}));
- await page.waitForFunction(()=>document.querySelector('#gcChart').classList.contains('geneviewer-selectable'));
-
  // Back to the gene: its colour is in the field. Reset removes it.
  await page.click(`#gcChart .gene[rowID="${row}"]`);
  await page.waitForFunction(()=>document.querySelector('[data-sb-input-id="element-fill"] input')?.value==='#d62728');

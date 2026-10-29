@@ -1,4 +1,4 @@
-#' Selection section
+#' Element section
 #'
 #' The style of one element on its own: a gene, gene label or coordinate, or
 #' the title or subtitle of a cluster title, footer or label. A click on it in
@@ -61,7 +61,7 @@ kind_of <- function(item) {
 # Identified by their row; legend parts by group, other text by cluster and part
 BY_ROW <- c("genes", "labels", "coordinates")
 WHOLE_SCALE <- c("scale", "scaleBar")
-DRAGGABLE <- c("labels", "title", "clusterTitle", "clusterFooter", "clusterLabel", WHOLE_SCALE)
+DRAGGABLE <- c("labels", "title", "clusterTitle", "clusterFooter", "clusterLabel", "legend", WHOLE_SCALE)
 
 # The fields are rebuilt for each element, so they are not registered as
 # settings of the examples (see register_input())
@@ -109,6 +109,10 @@ server_element <- function(id, data_key, open_section, section = function() NULL
   moduleServer(id, function(input, output, session) {
     edits <- reactiveVal(list())
     target <- reactiveVal(NULL)
+    # Several selected elements (Shift-click or a box in the chart): their
+    # items, the token of their fields and the position the fields show
+    group <- reactiveVal(NULL)
+    group_position <- list()
     generation <- 0L
     key <- function(item) paste(item$component, item$cluster, item$row_id, item$end, item$part, item$group,
                                 sep = ":")
@@ -133,20 +137,24 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       } else if (event$component %in% WHOLE_SCALE) !is.null(event$cluster)
       else if (event$component %in% BY_ROW) !is.null(event$data$rowID) else !is.null(event$part)
     }
-    open <- function(event, navigate = TRUE) {
-      if (!selectable(event)) return(FALSE)
+    # What the section keeps of a selected element
+    as_item <- function(event) {
       by_row <- event$component %in% BY_ROW
       # The first column that names the gene (of a coordinate), for the card
       gene <- if (event$component == "legend") NULL else if (event$component == "coordinates") event$data$gene else event$data
       gene <- gene[intersect(c("name", "label", "gene", "locus_tag", "product"), names(gene))]
       gene <- Filter(function(x) length(x) == 1 && !is.na(x) && nzchar(x), gene)
-      item <- list(component = event$component, cluster = event$cluster,
-                   row_id = if (by_row) event$data$rowID,
-                   end = if (event$component == "coordinates") event$data$end,
-                   part = if (!by_row) event$part,
-                   group = if (event$component == "legend") event$data,
-                   gene = if (length(gene)) as.character(gene[[1]]),
-                   drawn = event$style)
+      list(component = event$component, cluster = event$cluster,
+           row_id = if (by_row) event$data$rowID,
+           end = if (event$component == "coordinates") event$data$end,
+           part = if (!by_row) event$part,
+           group = if (event$component == "legend") event$data,
+           gene = if (length(gene)) as.character(gene[[1]]),
+           drawn = event$style)
+    }
+    open <- function(event, navigate = TRUE) {
+      if (!selectable(event)) return(FALSE)
+      item <- as_item(event)
       current <- isolate(target())
       changed_target <- is.null(current) || key(current) != key(item)
       # Own edits already have their values in the fields. Rebuild only when
@@ -158,12 +166,44 @@ server_element <- function(id, data_key, open_section, section = function() NULL
           !(item$component == "legend" && identical(item$part, "marker"))) {
         inherited <- setdiff(inherited, "opacity")
       }
+      # Moves refresh the fields themselves (move(), place()): a redraw after
+      # clearing one position field must not rebuild the other while typed in
+      inherited <- setdiff(inherited, c("moveX", "moveY"))
       changed_style <- any(vapply(inherited, function(name) {
         !identical(field_value(name, current$drawn[[name]]), field_value(name, item$drawn[[name]]))
       }, logical(1)))
       if (changed_target || changed_style) show(item)
       if (navigate || changed_target) open_section("element")
       TRUE
+    }
+
+    # A value all of them share, or "" when they differ
+    common <- function(items, name) {
+      values <- unique(vapply(items, function(item) field_value(name, item$drawn[[name]] %||% 0), ""))
+      if (length(values) == 1) values else ""
+    }
+    position_of <- function(items) {
+      movable <- Filter(function(item) item$component %in% DRAGGABLE, items)
+      list(moveX = common(movable, "moveX"), moveY = common(movable, "moveY"))
+    }
+    open_group <- function(events) {
+      events <- Filter(selectable, if (is.null(events)) list() else events)
+      if (length(events) < 2) {
+        group(NULL)
+        return(invisible(FALSE))
+      }
+      items <- lapply(events, as_item)
+      current <- isolate(group())
+      position <- position_of(items)
+      # The same elements where the fields put them: keep the fields, also
+      # while one is typed in
+      if (!is.null(current) && identical(vapply(current$items, key, ""), vapply(items, key, "")) &&
+          identical(position, group_position)) return(invisible(TRUE))
+      generation <<- generation + 1L
+      group_position <<- position
+      group(list(items = items, token = as.character(generation)))
+      if (is.null(current)) open_section("element")
+      invisible(TRUE)
     }
 
     # The name of the element and what it is, for the card and the switch
@@ -187,13 +227,63 @@ server_element <- function(id, data_key, open_section, section = function() NULL
               collapse = " "))
     }
 
+    # The fields of the shown element follow moves made in the chart
+    refresh <- function() {
+      item <- isolate(target())
+      if (is.null(item)) return()
+      if (item$component %in% DRAGGABLE) {
+        style <- isolate(edits())[[key(item)]]$style
+        item$drawn$moveX <- style$moveX %||% 0
+        item$drawn$moveY <- style$moveY %||% 0
+      }
+      show(item)
+    }
     # Row IDs belong to one dataset and mapping. Never carry edits to new data.
     observeEvent(data_key(), {
       edits(list())
       target(NULL)
+      group(NULL)
     }, ignoreInit = TRUE)
 
+    plural <- function(x) if (grepl("axis$", x)) sub("axis$", "axes", x) else paste0(x, "s")
+    group_fields <- function(selection) {
+      ns <- session$ns
+      items <- selection$items
+      kinds <- unique(vapply(items, function(item) kind_of(item)$name, ""))
+      names <- vapply(utils::head(items, 3), name_of, "")
+      movable <- any(vapply(items, function(item) item$component %in% DRAGGABLE, logical(1)))
+      position <- function(id, name, label) field(ns(id), label, block_input(
+        ns(id), value = group_position[[name]], placeholder = "Mixed", type = "number", step = 1),
+        stacked = TRUE)
+      sections(
+        tags$div(class = "gv-element-top", tags$div(
+          class = "gv-dataset gv-element-card",
+          tags$div(class = "gv-dataset-icon", block_icon(if (length(kinds) == 1) kind_of(items[[1]])$icon else "layers", size = "sm")),
+          tags$div(
+            class = "gv-dataset-text",
+            tags$div(class = "gv-dataset-name",
+                     paste(length(items), if (length(kinds) == 1) tolower(plural(kinds)) else "elements")),
+            tags$div(class = "gv-dataset-meta",
+                     paste0(paste(names, collapse = ", "), if (length(items) > 3) ", \u2026"))
+          ),
+          tags$div(class = "gv-element-reset",
+                   block_button("Reset", variant = "ghost", size = "sm", icon = "refresh-cw",
+                                id = ns("groupReset")))
+        ),
+        tags$p(class = "gv-element-hint",
+               if (movable) "Changes apply to all of them. Drag one in the chart, or use the arrow keys, to move them together."
+               else "Select one of them to change its style.")),
+        tags$div(hidden = NA, textInput(ns("groupToken"), NULL, selection$token)),
+        if (movable) field_group("Position",
+          tags$div(class = "gv-field-pair",
+            position("groupMoveX", "moveX", "Right (px)"),
+            position("groupMoveY", "moveY", "Down (px)")))
+      )
+    }
+
     output$fields <- renderUI({
+      selection <- group()
+      if (!is.null(selection)) return(group_fields(selection))
       item <- target()
       ns <- session$ns
       if (is.null(item)) {
@@ -201,7 +291,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
         return(tags$div(
           class = "gv-element-empty",
           block_icon("edit", size = "sm"),
-          tags$p("Click a gene, label, coordinate, cluster title or legend part in the preview to style it on its own."),
+          tags$p("Nothing selected."),
           if (n > 0) tags$div(
             tags$p(class = "gv-element-count",
                    if (n == 1) "1 element has its own style." else sprintf("%d elements have their own style.", n)),
@@ -258,11 +348,19 @@ server_element <- function(id, data_key, open_section, section = function() NULL
         tags$p(class = "gv-element-hint",
                "Current values are shown. Changes apply right away; clear a field to use the chart settings.")),
         tags$div(hidden = NA, textInput(ns("token"), NULL, item$token)),
-        if (item$component %in% DRAGGABLE) field_group("Drag offset",
-          num_input(ns, "moveX", "Move right (px)", value("moveX"), step = 1),
-          num_input(ns, "moveY", "Move down (px)", value("moveY"), step = 1),
-          block_button("Reset position", id = ns("resetPosition"), variant = "outline", size = "sm"),
-          tags$p(class = "gv-element-hint", "Offset from the configured layout; Reset position keeps other styling.")
+        # Where it is moved to from its place in the chart. Clearing both fields,
+        # Reset, or the chart's own undo and reset move it back.
+        if (item$component %in% DRAGGABLE) field_group("Position",
+          tags$div(class = "gv-field-pair",
+            field(ns("moveX"), "Right (px)", block_input(ns("moveX"), value = value("moveX"), type = "number", step = 1),
+                  stacked = TRUE),
+            field(ns("moveY"), "Down (px)", block_input(ns("moveY"), value = value("moveY"), type = "number", step = 1),
+                  stacked = TRUE),
+            if (item$component == "labels")
+              field(ns("rotate"), "Rotation", block_input(ns("rotate"), value = value("rotate"), type = "number",
+                                                          min = -360, max = 360, step = 5), stacked = TRUE)
+          ),
+          tags$p(class = "gv-element-hint", "Drag it in the chart, or use the arrow keys.")
         ),
         if (item$component %in% WHOLE_SCALE) tags$p(class = "gv-element-hint",
           "Drag anywhere on the scale to move it as a whole. Appearance settings are in Scale.")
@@ -291,13 +389,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
             tags$p(class = "gv-element-hint",
                    "From 0 (bottom) to 100 (top) of the cluster. The gene's label stays in place.")
           )
-        ) else if (item$component == "labels") tags$div(
-          text, font,
-          field_group("Position",
-            num_input(ns, "dx", "Move right", value("dx"), step = 1),
-            num_input(ns, "dy", "Move down", value("dy"), step = 1),
-            num_input(ns, "rotate", "Rotation", value("rotate"), min = -360, max = 360, step = 5)
-          )
+        ) else if (item$component == "labels") tags$div(text, font
         ) else if (item$component == "coordinates") tags$div(
           field_group(NULL, hide("Hide this coordinate", isFALSE(style$show))), font
         ) else tags$div(text, font)
@@ -324,8 +416,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
         list(fill = txt(input$fill), fontSize = px(input$fontSize),
              fontWeight = opt(input$fontWeight), fontStyle = opt(input$fontStyle),
              fontFamily = opt(input$fontFamily)),
-        if (item$component == "labels")
-          list(dx = num(input$dx), dy = num(input$dy), rotate = num(input$rotate))
+        if (item$component == "labels") list(rotate = num(input$rotate))
       )
       if (item$component %in% DRAGGABLE) {
         style <- c(style, list(moveX = num(input$moveX), moveY = num(input$moveY)))
@@ -347,7 +438,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
                       input$strokeWidth, input$strokeDasharray, input$y, input$text,
                       input$hide, input$fontSize, input$fontWeight, input$fontStyle,
                       input$fontFamily,
-                      input$dx, input$dy, input$rotate, input$moveX, input$moveY), {
+                      input$rotate, input$moveX, input$moveY), {
       item <- target()
       if (is.null(item) || !identical(input$token, item$token)) return()
       style <- read_style(item)
@@ -368,32 +459,68 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       if (!is.numeric(position$moveX) || !is.numeric(position$moveY) ||
           length(position$moveX) != 1 || length(position$moveY) != 1 ||
           !is.finite(position$moveX) || !is.finite(position$moveY)) return(FALSE)
+      # Whole pixels arrive as integers; fields send doubles
+      position <- lapply(position[c("moveX", "moveY")], as.numeric)
       open(event)
       item <- isolate(target())
       all <- isolate(edits())
       previous <- all[[key(item)]]$style
       all[[key(item)]] <- list(component = item$component,
         id = edit_id(item),
-        style = utils::modifyList(if (is.null(previous)) list() else previous, position[c("moveX", "moveY")]))
+        style = utils::modifyList(if (is.null(previous)) list() else previous, position))
       edits(all)
-      item$drawn <- utils::modifyList(if (is.null(item$drawn)) list() else item$drawn, position[c("moveX", "moveY")])
+      item$drawn <- utils::modifyList(if (is.null(item$drawn)) list() else item$drawn, position)
       show(item)
       TRUE
     }
-    observeEvent(input$resetPosition, {
-      item <- req(target())
-      req(item$component %in% DRAGGABLE)
+    # A position typed for several elements applies to all that can move;
+    # only the field typed in, so mixed values of the other stay
+    set_group_position <- function(name, value) {
+      selection <- group()
+      if (is.null(selection) || !identical(input$groupToken, selection$token)) return()
+      # As numbers: an empty number field sends NA, and must not clear the
+      # mixed values it shows
+      value <- num(value)
+      if (identical(value, num(group_position[[name]]))) return()
+      group_position[[name]] <<- if (is.null(value)) "" else field_value(name, value)
       all <- edits()
-      edit <- all[[key(item)]]
-      if (!is.null(edit)) {
-        edit$style[c("moveX", "moveY")] <- NULL
-        all[[key(item)]] <- if (length(edit$style)) edit else NULL
-        edits(all)
+      for (item in selection$items) {
+        if (!item$component %in% DRAGGABLE) next
+        style <- all[[key(item)]]$style
+        if (is.null(style)) style <- list()
+        style[[name]] <- value
+        all[[key(item)]] <- if (length(style)) list(component = item$component, id = edit_id(item), style = style)
       }
-      item$drawn$moveX <- 0
-      item$drawn$moveY <- 0
-      show(item)
+      if (!identical(all, edits())) edits(all)
+    }
+    observeEvent(input$groupMoveX, set_group_position("moveX", input$groupMoveX), ignoreInit = TRUE)
+    observeEvent(input$groupMoveY, set_group_position("moveY", input$groupMoveY), ignoreInit = TRUE)
+    observeEvent(input$groupReset, {
+      selection <- req(group())
+      all <- edits()
+      for (item in selection$items) all[[key(item)]] <- NULL
+      edits(all)
     })
+
+    # Several elements moved at once: the chart's reset, or undoing or redoing
+    # it. Elements back where the chart puts them keep no offset.
+    place <- function(events) {
+      all <- isolate(edits())
+      for (event in events) {
+        position <- event$position
+        if (!isTRUE(event$component %in% DRAGGABLE) || !selectable(event) ||
+            !is.numeric(position$moveX) || !is.numeric(position$moveY) ||
+            length(position$moveX) != 1 || length(position$moveY) != 1 ||
+            !is.finite(position$moveX) || !is.finite(position$moveY)) next
+        item <- as_item(event)
+        style <- utils::modifyList(all[[key(item)]]$style %||% list(),
+                                   lapply(position[c("moveX", "moveY")], as.numeric))
+        if (style$moveX == 0 && style$moveY == 0) style[c("moveX", "moveY")] <- NULL
+        all[[key(item)]] <- if (length(style)) list(component = item$component, id = edit_id(item), style = style)
+      }
+      edits(all)
+      refresh()
+    }
 
     # A swatch fills in its colour field, as if typed
     observeEvent(input$pick, {
@@ -405,7 +532,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       all <- edits()
       all[[key(item)]] <- NULL
       edits(all)
-      show(item)
+      refresh()
     })
     observeEvent(input$resetAll, edits(list()))
     observeEvent(input$scope, {
@@ -417,7 +544,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
 
     output$scope <- renderUI({
       item <- target()
-      if (is.null(item)) return(NULL)
+      if (is.null(item) || !is.null(group())) return(NULL)
       current <- section()
       kind <- kind_of(item)
       all <- kind$section
@@ -435,7 +562,8 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       )
     })
 
-    list(open = open, move = move, selectable = selectable, clear = function() target(NULL),
+    list(open = open, open_group = open_group, move = move, place = place, selectable = selectable,
+         clear = function() { target(NULL); group(NULL) },
          edits = function() unname(edits()), target = target)
   })
 }

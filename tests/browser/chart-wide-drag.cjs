@@ -17,7 +17,6 @@ const assert = require('node:assert/strict');
   const title='#gcChart [data-component="title"] [data-part="title"]';
   const subtitle='#gcChart [data-component="title"] [data-part="subtitle"]';
   await page.waitForSelector(label);await page.waitForSelector(title);
-  await page.click('[data-sb-input-id="dragMode"] [role="switch"]');
   await page.waitForFunction(()=>document.querySelector('#gcChart').classList.contains('geneviewer-draggable'));
   const source=await page.$eval('#gcChart svg[data-cluster="ophA"]',n=>n.getBoundingClientRect().toJSON());
   const target=await page.$eval('#gcChart svg[data-cluster="dbophA"]',n=>n.getBoundingClientRect().toJSON());

@@ -29,8 +29,8 @@ sections <- list(
                      "Text on or above each gene.", ui_labels("labels", data)),
   legend      = list("Legend", "list", "Legend",
                      "The key to the gene colours.", ui_legend("legend", data)),
-  element     = list("Selection", "edit", "Selection",
-                     "One element, styled on its own: a gene, label, coordinate, cluster text or legend part.", ui_element("element")),
+  element     = list("Element", "edit", "Element",
+                     "Click a gene, label, title or legend part in the chart to style it on its own.", ui_element("element")),
   titles      = list("Titles", "file-text", "Titles",
                      "Titles, footers and labels of the clusters.", ui_titles("titles", data)),
   scale       = list("Scale", "chart-line", "Scale",
@@ -164,7 +164,11 @@ ui <- block_page(
       });
       document.addEventListener('geneviewer:dragmove', function (event) {
         var current = Shiny.shinyapp.$inputValues.gcChart_select;
-        var key = function (d) { return JSON.stringify([d.component, d.cluster, d.part, d.data && d.data.rowID]); };
+        // A gene label by its row, a legend part by its group
+        var key = function (d) {
+          return JSON.stringify([d.component, d.cluster, d.part,
+                                 d.data && typeof d.data === 'object' ? d.data.rowID : d.data]);
+        };
         if (!current || key(current) !== key(event.detail)) return;
         ['moveX', 'moveY'].forEach(function (name) {
           var field = document.querySelector('[data-sb-input-id=\"element-' + name + '\"] input:not([data-shiny-no-bind-input])');
@@ -220,11 +224,7 @@ ui <- block_page(
         tags$div(
           tags$h2(class = "gv-canvas-title", "Preview"),
           tags$p(class = "gv-canvas-hint",
-                 "Click a gene, label, coordinate or cluster title to style it on its own, or any other part of the chart to open its settings. Hover the chart and use the download icon to save it as SVG or PNG.")
-        ),
-        tags$div(class = "gv-edit-controls",
-          block_switch("editMode", "Click to edit", value = TRUE, size = "sm"),
-          block_switch("dragMode", "Drag elements", value = FALSE, size = "sm")
+                 "Click any part of the chart to edit it, or drag labels, titles and scales to move them. Hover the chart and use the download icon to save it as SVG or PNG.")
         )
       ),
       tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto")),
