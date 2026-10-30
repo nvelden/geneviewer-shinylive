@@ -17,7 +17,7 @@ The Gene Cluster Dashboard is a comprehensive web application built with R Shiny
 - **Multiple file formats**: Support for CSV and GBK (GenBank) files
 - **Batch processing**: Upload multiple GBK files simultaneously
 - **Intelligent column mapping**: Automatic detection of standard gene annotation columns
-- **Example data**: ophA, erythromycin A, Tn7-like transposons, and pQEB1 plasmids with their nucleotide alignment
+- **Example data**: ophA, erythromycin A, Tn7-like transposons, pQEB1 plasmids with their nucleotide alignment, and coronaviruses of the four genera with links between homologous proteins
 
 ### Visualization Components
 - **Gene representations**: Multiple marker styles (arrow, box, rounded box) with customizable sizes
@@ -31,7 +31,7 @@ The Gene Cluster Dashboard is a comprehensive web application built with R Shiny
 
 ### Advanced Features
 - **Gene alignment**: Align genes across clusters based on specific criteria
-- **Gene links**: Visual connections between related genes across clusters
+- **Gene links**: Visual connections between related genes across clusters, with their measure (e.g. identity) beside the gene label or on the link itself, and a color bar in a corner or in the legend
 - **Scale breaks**: Handle large genomic regions with automatic scale breaks
 - **Zoom slider**: Under **Zoom**, add a slider below the chart to zoom in on part of the clusters; the R code and saved projects keep the window
 

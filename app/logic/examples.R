@@ -1,7 +1,7 @@
 #' Examples module
 #'
-#' The examples of the Data section: their data, the code that makes the data,
-#' and the settings that make the chart, by the (namespaced) id of the setting.
+#' The examples of the Data section: the code that makes their data, and the
+#' settings that make the chart, by the (namespaced) id of the setting.
 #' Settings an example does not set go back to their defaults.
 '.__module__.'
 
@@ -19,18 +19,25 @@ TN7_COLORS <- c(
   "right end" = "#9FD4DE", "left end" = "#F28E2B", "other" = "#E8E8E8"
 )
 
-tn7_data <- function() {
-  genes <- geneviewer::tn7_crispr_elements
-  genes$end[genes$gene == "R"] <- genes$end[genes$gene == "R"] + 100
-  genes$start[genes$gene == "L"] <- genes$start[genes$gene == "L"] - 100
-  genes
+CORONAVIRUS_COLORS <- c(
+  "5' UTR" = "#1A1A1A", ORF1a = "#4E79A7", ORF1b = "#A0CBE8", spike = "#E15759",
+  "hemagglutinin-esterase" = "#F28E2B", envelope = "#EDC948",
+  membrane = "#59A14F", nucleocapsid = "#2F4B7C", accessory = "#B07AA1",
+  "3' UTR" = "#BDBDBD"
+)
+
+# The data of an example: its code, run on the datasets of geneviewer, so
+# the code shown under the chart is the code that made the data
+run_code <- function(code) {
+  env <- new.env(parent = getNamespaceInfo("geneviewer", "lazydata"))
+  eval(parse(text = code), envir = env)
+  env$data
 }
 
 #' @export
 EXAMPLES <- list(
   ophA = list(
     label = "ophA gene clusters",
-    data = function() geneviewer::ophA_clusters,
     code = "# The example data of geneviewer\ndata <- ophA_clusters",
     inputs = function(data) list(
       `data-start` = "start", `data-end` = "end", `data-cluster` = "cluster",
@@ -40,7 +47,6 @@ EXAMPLES <- list(
 
   erythromycin = list(
     label = "Erythromycin A cluster",
-    data = function() geneviewer::erythromycin_cluster,
     code = "# The erythromycin A gene cluster, data of geneviewer\ndata <- erythromycin_cluster",
     inputs = function(data) {
       functions <- sort(unique(data$Functions))
@@ -63,7 +69,6 @@ EXAMPLES <- list(
 
   tn7 = list(
     label = "Tn7-like transposons",
-    data = tn7_data,
     code = paste0(
       "# Tn7-like transposons with a CRISPR-Cas system, data of geneviewer\n",
       "data <- tn7_crispr_elements\n",
@@ -121,9 +126,81 @@ EXAMPLES <- list(
     }
   ),
 
+  coronavirus = list(
+    label = "Coronaviruses of the four genera",
+    code = paste0(
+      "# Eleven coronaviruses of the four genera, data of geneviewer\n",
+      "data <- coronavirus_genomes\n",
+      "# The label below the name of each genome\n",
+      "data$label_subtitle <- paste0(\"<i>\", data$subgenus, \"</i>, \", data$host)"
+    ),
+    inputs = function(data) {
+      genus <- unique(data[, c("cluster", "genus")])$genus
+      list(
+        `data-start` = "start", `data-end` = "end", `data-cluster` = "cluster",
+        `data-group` = "category",
+        `size-height` = 850,
+        `colors-customColors` = paste(names(CORONAVIRUS_COLORS), "=", CORONAVIRUS_COLORS,
+                                      collapse = ", "),
+        # Every gene a box; ORFs that lie inside another gene, e.g. 9b inside
+        # N, go on the tracks below, as smaller boxes with their label inside
+        `genes-marker` = "box", `genes-markerHeight` = 18, `genes-arrowheadHeight` = 18,
+        # 3c and 3d of SARS-CoV-2 overlap by less than half: they share a
+        # track, so no genome needs a third one
+        `genes-overlap` = "nested", `genes-overlapMin` = "50%", `genes-overlapSpacing` = -4,
+        `genes-styleBy` = "geneTrack",
+        `genes-groupStyle` = "2, 3: markerHeight = 13, arrowheadHeight = 13, fill = #E8DCE6, stroke = #B07AA1",
+        `labels-show` = TRUE, `labels-label` = "gene", `labels-styleBy` = "geneTrack",
+        `labels-groupStyle` = "2, 3: dy = -1.6em, fontSize = 8px",
+        # Homologous genes of close relatives, coloured by identity, written
+        # on each link where it fits
+        `links-show` = TRUE, `links-source` = "matching", `links-group` = "homolog",
+        `links-measure` = "identity", `links-label` = TRUE,
+        `links-labelPosition` = "link", `links-labelSize` = 9, `links-vmin` = 20,
+        `links-colorBar` = "show", `links-colorBarPosition` = "legend",
+        `links-colorBarLegendSide` = "right",
+        `titles-label_show` = TRUE, `titles-label_subtitleColumn` = "label_subtitle",
+        `titles-label_width` = "170px", `titles-label_fontSize` = 13,
+        `titles-label_subSize` = 11, `titles-label_align` = "right", `titles-label_x` = -10,
+        # The genus above its first genome
+        `titles-title_show` = TRUE,
+        `titles-title_title` = paste(ifelse(duplicated(genus), "", genus), collapse = ", "),
+        `titles-title_align` = "left", `titles-title_height` = "30px",
+        `titles-title_x` = -165, `titles-title_y` = 10, `titles-title_t_fontSize` = 13,
+        `titles-chart_show` = TRUE,
+        `titles-chart_title` = "Conserved core, variable accessory genes: coronaviruses of the four genera",
+        `titles-chart_subtitle` = paste(
+          "Homologous proteins of close relatives linked by identity;",
+          "after Fig. 1 of Chazal (2021)"
+        ),
+        `titles-chart_height` = "55px", `titles-chart_t_fontSize` = 16,
+        `titles-chart_t_fontWeight` = "bold", `titles-chart_s_fontSize` = 12,
+        `titles-chart_s_fontStyle` = "italic",
+        `tooltip-formatter` = "<b>{gene}</b> {product}<br>{virus} {strain}<br>{start} - {end}",
+        `legend-position` = "top", `legend-align` = "center",
+        `legend-order` = join_names(names(CORONAVIRUS_COLORS)), `legend-fontSize` = 12,
+        # The legend names each category with its gene
+        `legend-groupStyle` = paste(
+          "5' UTR: text = \"5' UTR (L)\"",
+          "spike: text = \"spike (S)\"",
+          "hemagglutinin-esterase: text = \"hemagglutinin-esterase (HE)\"",
+          "envelope: text = \"envelope (E)\"",
+          "membrane: text = \"membrane (M)\"",
+          "nucleocapsid: text = \"nucleocapsid (N)\"",
+          sep = "\n"
+        ),
+        # The untranslated ends share a pattern
+        `colors-showPatterns` = TRUE, `colors-pattern` = "diagonal",
+        `colors-patternGroups` = "5' UTR, 3' UTR", `colors-patternColor` = "#8C8C8C",
+        `colors-patternBackground` = "none", `colors-patternSize` = 4,
+        `zoom-show` = TRUE, `zoom-height` = 44,
+        `theme-theme` = "publication"
+      )
+    }
+  ),
+
   pqeb1 = list(
     label = "pQEB1 plasmids and rearranged variants",
-    data = function() geneviewer::pQEB1_plasmids,
     links = function() geneviewer::pQEB1_alignment,
     link_code = quote(pQEB1_alignment),
     code = "# Five related IncN plasmids, data of geneviewer\ndata <- pQEB1_plasmids",
@@ -161,3 +238,8 @@ EXAMPLES <- list(
     }
   )
 )
+
+EXAMPLES <- lapply(EXAMPLES, function(example) {
+  example$data <- function() run_code(example$code)
+  example
+})

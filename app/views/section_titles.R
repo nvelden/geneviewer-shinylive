@@ -5,10 +5,11 @@
 '.__module__.'
 
 box::use(
-  shiny[NS, moduleServer, reactive, tags, conditionalPanel],
+  shiny[NS, moduleServer, reactive, tags],
   shinyblocks[block_tabs, block_tab],
   ../logic/ui_helpers[text_field, num_field, select_field, switch_field,
-                      field_group, sections, when_on, ALIGNMENTS, FONT_STYLES, NONE],
+                      field_group, sections, when_on, when_value, ALIGNMENTS, FONT_STYLES,
+                      NONE],
   ../logic/utils[num, txt, opt, px, compact, parse_delimited_input],
   ./section_labels[font_fields, font_values]
 )
@@ -111,13 +112,13 @@ ui_titles <- function(id, data) {
             select_field(ns("label_titleColumn"), "Text from column",
                          c("Manual text" = NONE, names(data)), NONE,
                          description = "Uses the first value per cluster; follows filtering and ordering."),
-            conditionalPanel(sprintf("input['%s'] === '%s'", ns("label_titleColumn"), NONE),
+            when_value(ns, "label_titleColumn", is = NONE,
               text_field(ns("label_title"), "Manual text", placeholder = "Label 1, Label 2, ...",
                          description = "Empty uses the cluster names.", stacked = TRUE)),
             select_field(ns("label_subtitleColumn"), "Subtitle from column",
                          c("Manual text" = NONE, names(data)), NONE,
                          description = "Uses the first value per cluster; follows filtering and ordering."),
-            conditionalPanel(sprintf("input['%s'] === '%s'", ns("label_subtitleColumn"), NONE),
+            when_value(ns, "label_subtitleColumn", is = NONE,
               text_field(ns("label_subtitle"), "Manual subtitle", placeholder = "Species 1, Species 2, ...",
                          stacked = TRUE))
           )

@@ -6,8 +6,8 @@
 box::use(
   shiny[NS, moduleServer, reactive, tags],
   ../logic/ui_helpers[color_field, select_field, num_field, text_field, switch_field,
-                      field_group, sections, when_on, register_input, group_style_fields,
-                      NONE],
+                      field_group, sections, when_on, when_value, register_input,
+                      group_style_fields, NONE],
   ../logic/setup[ui_group_picker],
   ../logic/utils[num, txt, opt, compact, parse_delimited_input, parse_named_colors,
                  parse_group_styles, split_unquoted]
@@ -45,17 +45,44 @@ ui_genes <- function(id, data) {
                 description = "From 0 (bottom) to 100 (top) of the cluster.")
     ),
     field_group(
+      "Overlapping genes",
+      select_field(ns("overlap"), "Separate",
+                   c("Off" = "off", "All overlapping genes" = "all",
+                     "Only genes inside another gene" = "nested"), "off",
+                   description = "Puts overlapping genes on tracks below each other. Match group styles on Gene track to style each track."),
+      when_value(ns, "overlap", not = "off",
+        text_field(ns("overlapMin"), "Min overlap", placeholder = "Any overlap",
+                   description = "Base pairs, or a share of the shorter gene such as 10%. Genes that overlap by no more stay on one track."),
+        num_field(ns("overlapSpacing"), "Track spacing", step = 1, default = 5,
+                  description = "Pixels between the tracks; negative values let them overlap.")
+      )
+    ),
+    field_group(
       "Group styles",
       group_style_fields(ns, data, "R, L: marker = box, markerHeight = 38")
     )
   )
 }
 
+# The overlap a gene needs to go on its own track: base pairs, or a share
+overlap_min <- function(x) {
+  x <- txt(x)
+  if (is.null(x)) return(NULL)
+  if (grepl("%$", x)) x else num(x)
+}
+
 #' @export
 server_genes <- function(id) {
   moduleServer(id, function(input, output, session) {
     reactive({
+      overlap <- input$overlap %||% "off"
       list(
+        # GC_cluster(): overlapping genes on separate tracks
+        cluster = if (overlap != "off") compact(list(
+          prevent_gene_overlap = if (overlap == "nested") "nested" else TRUE,
+          overlap_min = overlap_min(input$overlapMin),
+          overlap_spacing = num(input$overlapSpacing)
+        )),
         args = compact(list(
           marker = opt(input$marker), markerSize = opt(input$markerSize),
           style_by = opt(input$styleBy),

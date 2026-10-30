@@ -15,7 +15,7 @@ box::use(
   ./logic/code_gen[chart_code, data_code],
   ./logic/examples[EXAMPLES],
   ./logic/project[write_project, read_project],
-  ./logic/ui_helpers[INPUT_TYPES, COLOR_INPUTS, NONE],
+  ./logic/ui_helpers[INPUT_TYPES, COLOR_INPUTS, NONE, style_by_choices],
   ./views/section_data[column_choices],
 )
 
@@ -157,7 +157,7 @@ function(input, output, session) {
       "links-group" = , "alignment-idColumn" = cols,
       "tooltip-columns" = cols,
       "titles-label_titleColumn" = , "titles-label_subtitleColumn" = c("Manual text" = NONE, cols),
-      "labels-styleBy" = , "genes-styleBy" = c("Group column" = NONE, cols),
+      "labels-styleBy" = , "genes-styleBy" = style_by_choices(cols),
       "data-start" = , "data-end" = , "data-cluster" = , "data-group" = , "data-strand" =
         column_choices(cols),
       "data-order" = {
@@ -462,6 +462,9 @@ function(input, output, session) {
     custom_colors <- colors$namedColors %||% if (!is.null(group) && group %in% names(data)) {
       make_named_color_list(data, group, colors$customColors)
     }
+
+    # Overlapping genes on separate tracks, before the genes are styled by them
+    if (!is.null(genes$cluster)) chart <- add(chart, "GC_cluster", genes$cluster)
 
     chart <- chart |>
       add_shown("GC_title", c(titles$chart$args, titles$chart$style)) |>

@@ -149,14 +149,21 @@ group_style_fields <- function(ns, data, example, with_style_by = TRUE) {
   tags$div(
     class = "gv-group-body",
     if (with_style_by) {
-      select_field(ns("styleBy"), "Match on", c("Group column" = NONE, names(data)), NONE,
-                   description = "The column the groups of the rules are values of.")
+      select_field(ns("styleBy"), "Match on", style_by_choices(names(data)), NONE,
+                   description = "The column the groups of the rules are values of, or the track of a gene (1, 2, ...) when overlapping genes are separated.")
     },
     textarea_field(
       ns("groupStyle"), "Rules", placeholder = example, rows = 3,
       description = "One rule per line: groups, a colon, then options. Quote names with commas."
     )
   )
+}
+
+#' The choices of a "Match on" picker: the group column, the columns of the
+#' data, and the track of a gene (GC_cluster(prevent_gene_overlap = ))
+#' @export
+style_by_choices <- function(cols) {
+  c("Group column" = NONE, stats::setNames(cols, cols), "Gene track" = "geneTrack")
 }
 
 #' Several fields, one row each
@@ -188,6 +195,15 @@ sections <- function(...) {
 #' @export
 when_on <- function(ns, input_id, ...) {
   conditionalPanel(sprintf("input['%s']", ns(input_id)), class = "gv-when", ...)
+}
+
+#' Fields shown only while a select is at one of the values `is`, or at none
+#' of the values `not`
+#' @export
+when_value <- function(ns, input_id, ..., is = NULL, not = NULL) {
+  values <- paste0("'", c(is, not), "'", collapse = ", ")
+  test <- sprintf("[%s].includes(input['%s'])", values, ns(input_id))
+  conditionalPanel(if (is.null(is)) paste0("!", test) else test, class = "gv-when", ...)
 }
 
 #' Font family choices

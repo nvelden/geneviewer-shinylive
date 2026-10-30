@@ -7,20 +7,18 @@ box::use(
   shinyblocks[block_combobox, update_block_select, update_block_combobox,
               block_file_input, update_block_file_input, show_toast],
   ../logic/ui_helpers[color_field, field, text_field, num_field, select_field, switch_field,
-                      textarea_field, field_group, sections, when_on, register_input,
+                      textarea_field, field_group, sections, when_on, when_value, register_input,
                       ALIGNMENTS, NONE],
   ../logic/setup[setup_notice, setup_action, column_has_values],
-  ../logic/utils[num, txt, compact, parse_delimited_input, pick_choice],
+  ../logic/utils[num, txt, opt, px, compact, parse_delimited_input, pick_choice],
   ../logic/alignment_data[validate_alignment]
 )
 
 #' @export
 ui_links <- function(id, data) {
   ns <- NS(id)
-  matching <- function(...) conditionalPanel(
-    sprintf("input['%s'] !== 'alignment'", ns("source")), ...)
-  alignment <- function(...) conditionalPanel(
-    sprintf("input['%s'] === 'alignment'", ns("source")), ...)
+  matching <- function(...) when_value(ns, "source", not = "alignment", ...)
+  alignment <- function(...) when_value(ns, "source", is = "alignment", ...)
   custom_colors <- function(...) conditionalPanel(
     sprintf("input['%s'] === 'alignment' || !input['%s']", ns("source"), ns("useGroupColors")), ...)
   sections(
@@ -50,12 +48,41 @@ ui_links <- function(id, data) {
         "Measure",
         select_field(ns("measure"), "Color by",
                      c("Identity (%)" = "identity", "Similarity (%)" = "similarity", "Strand only" = "none"), "identity"),
-        matching(switch_field(ns("label"), "Show measure labels", TRUE)),
+        switch_field(ns("label"), "Show measure labels", TRUE),
+        when_on(ns, "label",
+          select_field(ns("labelPosition"), "Label position",
+                       c("With the gene" = "gene", "On the link" = "link"), default = "gene",
+                       description = "On the link, a measure is written only where it fits; zoom in to see more. Alignment links are labelled on the link only."),
+          num_field(ns("labelSize"), "Label size (px)", min = 4, max = 30, step = 1, default = 10)
+        ),
         tags$div(style = "display:none", textOutput(ns("colorBarAvailable"))),
         custom_colors(conditionalPanel(
           sprintf("output['%s'] === 'true'", ns("colorBarAvailable")),
           select_field(ns("colorBar"), "Color bar", c("Show" = "show", "Hide" = "hide"),
-                       default = "show")))
+                       default = "show"),
+          when_value(ns, "colorBar", not = "hide",
+            select_field(ns("colorBarPosition"), "Color bar position",
+                         c("Bottom right" = "bottomright", "Bottom left" = "bottomleft",
+                           "Top right" = "topright", "Top left" = "topleft",
+                           "In the legend" = "legend"), default = "bottomright"),
+            when_value(ns, "colorBarPosition", not = "legend",
+              select_field(ns("colorBarOrientation"), "Orientation",
+                           c("Vertical" = "vertical", "Horizontal" = "horizontal"),
+                           default = "vertical"),
+              when_value(ns, "colorBarOrientation", is = "horizontal",
+                select_field(ns("colorBarLabels"), "Measures",
+                             c("In line with the bar" = "inline", "Below the bar" = "below"),
+                             default = "inline",
+                             description = "Below the bar, with ticks; the bar is then about three lines tall.")),
+              num_field(ns("colorBarX"), "Move in, sideways (px)", step = 1, default = 0,
+                        description = "Pixels in from the corner, e.g. when the bar covers genes."),
+              num_field(ns("colorBarY"), "Move in, up or down (px)", step = 1, placeholder = "Auto",
+                        description = "Auto: 24 for a standing bar at the bottom, else 0.")),
+            when_value(ns, "colorBarPosition", is = "legend",
+              select_field(ns("colorBarLegendSide"), "Side of the legend",
+                           c("Left" = "left", "Right" = "right"), default = "left")),
+            switch_field(ns("colorBarTitle"), "Show the bar's title", TRUE)
+          )))
       ),
       field_group(
         "Colors",
@@ -152,7 +179,9 @@ server_links <- function(id, r, mapping) {
           group = if (!external) input$group,
           data = if (external) r$link_data,
           measure = measure,
-          label = !external && isTRUE(input$label),
+          label = isTRUE(input$label),
+          # Alignment links are not tied to genes: their measures go on the links
+          label_position = if (isTRUE(input$label)) opt(input$labelPosition),
           value1 = if (!external) parse_delimited_input(txt(input$value1)),
           value2 = if (!external) parse_delimited_input(txt(input$value2))
         )),
@@ -164,6 +193,23 @@ server_links <- function(id, r, mapping) {
           normal_color = if (!gene_colors) txt(input$normalColor),
           inverted_color = if (!gene_colors) txt(input$invertedColor),
           vmin = if (!gene_colors) num(input$vmin), vmax = if (!gene_colors) num(input$vmax),
+          labelStyle = if (isTRUE(input$label)) compact(list(fontSize = px(input$labelSize))),
+          colorBarOptions = if (!gene_colors && has_measure() && !identical(input$colorBar, "hide")) {
+            position <- opt(input$colorBarPosition)
+            corner <- !identical(position, "legend")
+            orientation <- if (corner) opt(input$colorBarOrientation)
+            compact(list(
+              position = position,
+              orientation = orientation,
+              # Measures below the bar only for a lying bar in a corner; the
+              # legend has them inline
+              labels = if (identical(orientation, "horizontal")) opt(input$colorBarLabels),
+              x = if (corner) num(input$colorBarX),
+              y = if (corner) num(input$colorBarY),
+              legendSide = if (!corner) opt(input$colorBarLegendSide),
+              title = if (identical(input$colorBarTitle, FALSE)) FALSE
+            ))
+          },
           curve = isTRUE(input$curve), linkWidth = num(input$linkWidth),
           linkStyle = compact(list(stroke = txt(input$stroke),
                                    strokeWidth = num(input$strokeWidth), fillOpacity = num(input$opacity)))

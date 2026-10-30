@@ -79,6 +79,25 @@ const path = require('node:path');
                                                     { timeout: 30000 }, width));
     await step('project code', page.waitForFunction(c => document.querySelector('#chartCode').textContent.includes(c), {}, code));
 
+    // Zoomed in further, opening the same project again puts its window back,
+    // in the chart, the code and a project saved again
+    const end2 = await (await page.$('#gcChart [data-zoom-part=end]')).boundingBox();
+    await page.mouse.move(end2.x + end2.width / 2, end2.y + end2.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(end2.x - 200, end2.y + end2.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await step('zoom further', page.waitForFunction(c => !document.querySelector('#chartCode').textContent.includes(c), {}, code));
+    await (await page.$('input[type=file]')).uploadFile(file);
+    await step('reopen zoom', page.waitForFunction(w => document.querySelector('#gcChart .geneviewer-zoom-window')?.style.width === w,
+                                                   { timeout: 30000 }, width));
+    await step('reopen code', page.waitForFunction(c => document.querySelector('#chartCode').textContent.includes(c), {}, code));
+    await page.evaluate(() => {
+      window.__saved = null;
+      Shiny.setInputValue('data-saveProject', Date.now(), { priority: 'event' });
+    });
+    await page.waitForFunction(() => window.__saved !== null);
+    assert.deepEqual(JSON.parse(await page.evaluate(() => window.__saved)).zoom, JSON.parse(saved).zoom);
+
     // Double-click shows everything, and the code leaves the range out
     await page.click('#gcChart .geneviewer-zoom-slider', { clickCount: 2 });
     await page.waitForFunction(() => document.querySelector('#gcChart .geneviewer-zoom-window').style.width === '100%');
