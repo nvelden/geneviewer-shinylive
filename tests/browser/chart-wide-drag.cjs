@@ -36,7 +36,7 @@ const assert = require('node:assert/strict');
    await page.mouse.move(p.x+dx,p.y+dy,{steps:12});await page.mouse.up();
    await page.waitForFunction(selector=>document.querySelector(selector)!==window.dragOriginal,{},selector);
    try {
-    await page.waitForFunction(selector=>!!document.querySelector(selector).closest('.geneviewer-text-overlay'),{timeout:10000},selector);
+    await page.waitForFunction(selector=>!!document.querySelector(selector).closest('.geneviewer-move-overlay'),{timeout:10000},selector);
    } catch(error) {
     console.log('Unmoved text',await page.evaluate(selector=>({node:document.querySelector(selector).outerHTML,
       drawn:document.querySelector(selector).__drawn__,drag:Shiny.shinyapp.$inputValues.gcChart_drag,
@@ -63,7 +63,7 @@ const assert = require('node:assert/strict');
   await page.$eval(label,n=>{window.resizeOriginal=n});
   await page.setViewport({width:1500,height:1200});
   await page.waitForFunction(selector=>document.querySelector(selector)!==window.resizeOriginal,{},label);
-  await page.waitForFunction(selector=>!!document.querySelector(selector).closest('.geneviewer-text-overlay'),{},label);
+  await page.waitForFunction(selector=>!!document.querySelector(selector).closest('.geneviewer-move-overlay'),{},label);
   assert.equal(await page.$eval(label,n=>n.__drawn__.moveY),before);await glyph(label);
   assert.deepEqual(errors,[]);
   console.log('chart-wide drag browser test passed: cluster boundary, title/subtitle, re-grabbing, resize and SVG export');
