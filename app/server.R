@@ -9,6 +9,7 @@ box::use(
   ./views/section_element[server_element],
   ./views/section_scale[server_scale, server_coordinates, server_sequence],
   ./views/section_compare[server_links, server_alignment, server_tooltip, server_size],
+  ./views/section_zoom[server_zoom],
   ./logic/setup[server_group_setup],
   ./logic/utils[make_named_color_list, order_cluster_data, cluster_values, opt],
   ./logic/code_gen[chart_code, data_code],
@@ -56,6 +57,7 @@ function(input, output, session) {
   alignment_inputs <- server_alignment("alignment", r = r)
   tooltip_inputs <- server_tooltip("tooltip", r = r)
   size_inputs <- server_size("size")
+  zoom_inputs <- server_zoom("zoom")
 
   # The geneviewer calls behind the chart, shown as R code under it
   calls <- NULL
@@ -77,6 +79,15 @@ function(input, output, session) {
       if (record) calls[[length(calls) + 1]] <<- list(name = name, args = code_args %||% args)
       result
     })
+  }
+
+  # The zoom slider. A window from a project is drawn first, in its own mode;
+  # the code gets the window the user picked (see code() below).
+  add_zoom <- function(chart, zoom) {
+    if (!isTRUE(zoom$show)) return(chart)
+    start <- isolate(r$zoom_start)
+    range <- if (identical(start$mode, zoom$args$mode %||% "relative")) start$range
+    add(chart, "GC_zoom", zoom$args, list(range = range), code_args = zoom$args)
   }
 
   # Components switched off do nothing; leave them out of the code
@@ -229,6 +240,9 @@ function(input, output, session) {
 
     r$pending <- list(token = load_token, targets = targets)
     r$cluster_data <- data
+    # New data shows everything; a project puts its window back after this
+    r$zoom_start <- NULL
+    r$zoom_window <- NULL
 
     tryCatch(
       apply_settings(targets, data),
@@ -269,7 +283,8 @@ function(input, output, session) {
       settings = sapply(ls(INPUT_TYPES), function(id) settings[[id]], simplify = FALSE),
       edits = element_editor$saved(),
       links = if (!is.null(r$link_data)) list(data = r$link_data, name = r$link_name, upload = upload),
-      source = list(name = r$source_name, example = r$example, files = r$source_files)
+      source = list(name = r$source_name, example = r$example, files = r$source_files),
+      zoom = zoom_range()
     )
     name <- tools::file_path_sans_ext(r$source_name %||% "geneviewer")
     name <- gsub("[^A-Za-z0-9._-]+", "_", name)
@@ -294,6 +309,7 @@ function(input, output, session) {
     r$link_name <- NULL
     r$restore <- list(edits = project$edits, links = project$links)
     load_dataset(project$data, project$settings)
+    r$zoom_start <- project$zoom
   }
 
   observeEvent(r$pending, {
@@ -366,6 +382,17 @@ function(input, output, session) {
     if (is.null(input$gcChart_select)) element_editor$clear()
     else element_editor$open(input$gcChart_select, navigate = FALSE)
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
+  # The zoom window (GC_zoom()). The chart reports it after every change;
+  # the app keeps it for the code and project files, but does not draw the
+  # chart again for it: the chart keeps its window when it is redrawn.
+  observeEvent(input$gcChart_zoom, r$zoom_window <- input$gcChart_zoom)
+  # The window to write: list(mode, range), or NULL when everything shows
+  zoom_range <- reactive({
+    zoom <- r$zoom_window
+    if (!isTRUE(input[["zoom-show"]]) || !isTRUE(zoom$zoomed)) return(NULL)
+    list(mode = zoom$mode, range = as.numeric(unlist(zoom$range)))
+  })
 
   # The chart and its code
   chart <- reactive({
@@ -442,6 +469,7 @@ function(input, output, session) {
       add_shown("GC_labels", c(labels$args, labels$style)) |>
       add("GC_scale", scale$args, scale$style) |>
       add_shown("GC_scaleBar", c(scale$bar$args, scale$bar$style)) |>
+      add_zoom(zoom_inputs()) |>
       add_shown("GC_clusterTitle", c(titles$title$args, titles$title$style)) |>
       add_shown("GC_clusterFooter", c(titles$footer$args, titles$footer$style)) |>
       add_shown("GC_clusterLabel", c(titles$label$args, titles$label$style))
@@ -467,7 +495,7 @@ function(input, output, session) {
     # App interaction and loading events are not part of the exported code.
     chart <- add(chart, "GC_events", list(
       click = TRUE, highlight = TRUE, dblclick = TRUE, select = TRUE, drag = TRUE,
-      rendered = TRUE, render_id = r$load_token
+      zoom = TRUE, rendered = TRUE, render_id = r$load_token
     ), record = FALSE)
 
     if (alignment$align && !is.null(alignment$id)) {
@@ -491,18 +519,34 @@ function(input, output, session) {
       chart <- add(chart, "GC_element_style", c(list(component = edit$component), edit$id, edit$style))
     }
 
-    # The code is extra: a problem with it must not stop the chart
-    code <- tryCatch(
-      chart_code(calls, data_code(
+    data_source <- tryCatch(
+      data_code(
         files = r$source_files,
         cluster_col = columns$cluster,
         order = columns$order,
         example_code = EXAMPLES[[r$example %||% ""]]$code,
         link_code = if (links$args$show && links$useAlignment && links$ready) r$link_code
-      ), trim = is.null(chart$x$theme)),
+      ),
+      error = function(e) paste("# The data code could not be written:", conditionMessage(e))
+    )
+    list(widget = chart, calls = calls, data = data_source, trim = is.null(chart$x$theme))
+  })
+
+  # The code of the chart, with the zoom window the user picked. The code is
+  # extra: a problem with it must not stop the chart.
+  code <- reactive({
+    built <- chart()
+    calls <- built$calls
+    zoom <- zoom_range()
+    at <- which(vapply(calls, function(call) identical(call$name, "GC_zoom"), logical(1)))
+    if (length(at) == 1 && !is.null(zoom) &&
+        identical(zoom$mode, calls[[at]]$args$mode %||% "relative")) {
+      calls[[at]]$args$range <- zoom$range
+    }
+    tryCatch(
+      chart_code(calls, built$data, trim = built$trim),
       error = function(e) paste("# The code could not be written:", conditionMessage(e))
     )
-    list(widget = chart, code = code)
   })
 
   # While the settings of a load arrive, keep the chart and code that are shown
@@ -513,6 +557,6 @@ function(input, output, session) {
 
   output$chartCode <- renderUI({
     req(is.null(r$pending), is.null(r$restore), cancelOutput = TRUE)
-    shinyblocks::block_code(chart()$code, language = "r", line_numbers = FALSE)
+    shinyblocks::block_code(code(), language = "r", line_numbers = FALSE)
   })
 }

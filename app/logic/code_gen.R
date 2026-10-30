@@ -80,6 +80,7 @@ JS_DEFAULTS <- list(
     markerStyle = list(stroke = "grey", strokeWidth = 1)
   ),
   GC_color = list(colorScheme = "schemeCategory10"),
+  GC_zoom = list(mode = "relative", update = "live", overview = TRUE, height = 24),
   GC_links = list(
     curve = TRUE, normal_color = "#969696", inverted_color = "#d62728",
     low_color = "white", vmin = 0, vmax = 100, linkWidth = 1

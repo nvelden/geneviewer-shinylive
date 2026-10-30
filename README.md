@@ -33,6 +33,7 @@ The Gene Cluster Dashboard is a comprehensive web application built with R Shiny
 - **Gene alignment**: Align genes across clusters based on specific criteria
 - **Gene links**: Visual connections between related genes across clusters
 - **Scale breaks**: Handle large genomic regions with automatic scale breaks
+- **Zoom slider**: Under **Zoom**, add a slider below the chart to zoom in on part of the clusters; the R code and saved projects keep the window
 
 ### Extensive Customization
 - **Color schemes**: Built-in color palettes or custom color definitions

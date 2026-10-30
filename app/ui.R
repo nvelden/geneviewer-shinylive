@@ -10,7 +10,8 @@ box::use(
   ./views/section_titles[ui_titles],
   ./views/section_element[ui_element, ui_element_scope],
   ./views/section_scale[ui_scale, ui_coordinates, ui_sequence],
-  ./views/section_compare[ui_links, ui_alignment, ui_tooltip, ui_size]
+  ./views/section_compare[ui_links, ui_alignment, ui_tooltip, ui_size],
+  ./views/section_zoom[ui_zoom]
 )
 
 data <- geneviewer::ophA_clusters
@@ -45,6 +46,8 @@ sections <- list(
                      "Line the clusters up on one gene.", ui_alignment("alignment", data)),
   tooltip     = list("Tooltip", "message-circle", "Tooltip",
                      "What shows when you hover a gene.", ui_tooltip("tooltip", data)),
+  zoom        = list("Zoom", "search", "Zoom",
+                     "A slider below the chart to zoom in on part of the clusters.", ui_zoom("zoom")),
   size        = list("Size", "layout-grid", "Size",
                      "Width, height and margins of the chart.", ui_size("size"))
 )
@@ -54,7 +57,7 @@ nav_groups <- list(
   "Appearance"  = c("theme", "genes", "colors", "labels", "legend", "element"),
   "Layout"      = c("titles", "scale", "coordinates", "sequence", "size"),
   "Compare"     = c("links", "alignment"),
-  "Interaction" = c("tooltip")
+  "Interaction" = c("tooltip", "zoom")
 )
 
 nav_items <- unlist(lapply(names(nav_groups), function(group) {

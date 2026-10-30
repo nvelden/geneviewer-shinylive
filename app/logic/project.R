@@ -83,8 +83,10 @@ scalars <- function(x) {
 #' @param edits The edits of the Element section, by their key
 #' @param links The alignment: list(data, name, upload), or NULL
 #' @param source Where the data came from: list(name, example, files)
+#' @param zoom The window of the zoom slider: list(mode, range), or NULL
 #' @export
-write_project <- function(data, settings, edits = list(), links = NULL, source = list()) {
+write_project <- function(data, settings, edits = list(), links = NULL, source = list(),
+                          zoom = NULL) {
   # A setting without a value is saved as an empty list, so it is not
   # replaced by its default when the project is opened
   settings <- lapply(settings, function(v) if (is.null(v)) I(character(0)) else if (length(v) != 1) I(v) else v)
@@ -99,6 +101,7 @@ write_project <- function(data, settings, edits = list(), links = NULL, source =
     links = if (!is.null(links$data)) list(name = links$name, upload = isTRUE(links$upload),
                                           data = encode_data(links$data)),
     settings = settings,
+    zoom = if (!is.null(zoom)) list(mode = zoom$mode, range = I(zoom$range)),
     edits = if (length(edits)) edits else structure(list(), names = character(0))
   )
   toJSON(project, auto_unbox = TRUE, null = "null", na = "null", digits = NA, pretty = TRUE)
@@ -110,7 +113,7 @@ write_project <- function(data, settings, edits = list(), links = NULL, source =
 #' damaged. Settings and edits that are not values are left out.
 #'
 #' @param path The path of the file
-#' @return list(data, settings, edits, links, source)
+#' @return list(data, settings, edits, links, source, zoom)
 #' @export
 read_project <- function(path) {
   project <- tryCatch(fromJSON(path, simplifyVector = FALSE), error = function(e) NULL)
@@ -139,8 +142,18 @@ read_project <- function(path) {
          upload = isTRUE(links$upload))
   }
 
+  # The zoom window: shares of the clusters, or base pairs
+  zoom <- project$zoom
+  range <- if (is.list(zoom)) suppressWarnings(as.numeric(as_vector(zoom$range)))
+  zoom <- if (is.list(zoom) && isTRUE(zoom$mode %in% c("relative", "absolute")) &&
+              length(range) == 2 && all(is.finite(range)) && range[1] < range[2] &&
+              (zoom$mode == "absolute" || (range[1] >= 0 && range[2] <= 1))) {
+    list(mode = zoom$mode, range = range)
+  }
+
   source <- project$source %||% list()
   list(
+    zoom = zoom,
     data = decode_data(project$data),
     settings = settings,
     edits = edits,
