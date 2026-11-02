@@ -199,6 +199,52 @@ EXAMPLES <- list(
     }
   ),
 
+  mitochondria = list(
+    label = "Mitochondrial gene order: locust and human",
+    code = paste0(
+      "# Mitochondrial genomes of locust and human, data of geneviewer\n",
+      "data <- mitochondrial_gene_order\n",
+      "# Rotate each circular genome to start at COX1, keeping the spacing\n",
+      "first <- data[data$gene == \"COX1\", ]\n",
+      "cox1 <- first$start[match(data$cluster, first$cluster)]\n",
+      "data$plot_start <- (data$start - cox1) %% data$genome_length + 1\n",
+      "data$plot_end <- data$plot_start + data$end - data$start\n",
+      "# Reverse-strand genes get a leading minus, as in the published figure\n",
+      "data$label <- ifelse(data$strand == \"complement\", paste0(\"-\", data$gene), data$gene)"
+    ),
+    inputs = function(data) {
+      colors <- c("Conserved flanks" = "#D9D5D2", "ND4L / ND4 / ND5" = "#F22228",
+                  "ND6" = "#FFF000", "CYTB" = "#00AC52", "RNS / RNL / ND1" = "#36328C")
+      genomes <- unique(data[, c("cluster", "genome_length")])
+      list(
+        `data-start` = "plot_start", `data-end` = "plot_end", `data-cluster` = "cluster",
+        `data-group` = "block", `data-strand` = "strand",
+        `size-height` = 320,
+        `colors-customColors` = paste(names(colors), "=", colors, collapse = ", "),
+        `genes-marker` = "box", `genes-markerHeight` = 18, `genes-arrowheadHeight` = 18,
+        `genes-cornerRadius` = 0,
+        # A negative spacing puts reverse-strand genes above the line
+        `genes-separateStrands` = TRUE, `genes-strandSpacing` = -18,
+        # The labels on one line below the genes, with a line to each gene
+        `labels-show` = TRUE, `labels-label` = "label", `labels-fontStyle` = "normal",
+        `labels-spread` = "bottom", `labels-leaderLength` = 12,
+        `scale-axisType` = "range",
+        `titles-footer_show` = TRUE,
+        `titles-footer_title` = paste(genomes$cluster, collapse = ", "),
+        `titles-footer_subtitle` = paste0("13 proteins; 2 rRNAs; ", genomes$genome_length,
+                                          " bp", collapse = ", "),
+        `titles-footer_align` = "left", `titles-footer_y` = 10,
+        `titles-chart_show` = TRUE,
+        `titles-chart_title` = "Mitochondrial gene order: locust and human",
+        `titles-chart_subtitle` = "Redrawn from Fig. 3 of Jameson et al. (2003), Nucleic Acids Res 31:202-206",
+        `titles-chart_t_fontSize` = 19,
+        `tooltip-formatter` = "<b>{gene}</b>: {product}<br>{cluster}<br>RefSeq: {accession}<br>Original coordinates: {start} - {end} ({strand})",
+        `legend-show` = FALSE,
+        `theme-theme` = "publication", `theme-fontFamily` = "monospace"
+      )
+    }
+  ),
+
   pqeb1 = list(
     label = "pQEB1 plasmids and rearranged variants",
     links = function() geneviewer::pQEB1_alignment,

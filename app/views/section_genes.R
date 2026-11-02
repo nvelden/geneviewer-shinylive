@@ -45,6 +45,15 @@ ui_genes <- function(id, data) {
                 description = "From 0 (bottom) to 100 (top) of the cluster.")
     ),
     field_group(
+      "Strands",
+      switch_field(ns("separateStrands"), "Separate strands",
+                   description = "Puts the genes of each strand on its own side of the sequence line. Overlapping genes then stay on one track."),
+      when_on(ns, "separateStrands",
+        num_field(ns("strandSpacing"), "Strand spacing", step = 1, default = 0,
+                  description = "Pixels added between the strands; negative values put the reverse strand on top.")
+      )
+    ),
+    field_group(
       "Overlapping genes",
       select_field(ns("overlap"), "Separate",
                    c("Off" = "off", "All overlapping genes" = "all",
@@ -77,8 +86,12 @@ server_genes <- function(id) {
     reactive({
       overlap <- input$overlap %||% "off"
       list(
-        # GC_cluster(): overlapping genes on separate tracks
-        cluster = if (overlap != "off") compact(list(
+        # GC_cluster(): the strands, or overlapping genes, on separate tracks
+        # (geneviewer does not combine the two)
+        cluster = if (isTRUE(input$separateStrands)) compact(list(
+          separate_strands = TRUE,
+          strand_spacing = num(input$strandSpacing)
+        )) else if (overlap != "off") compact(list(
           prevent_gene_overlap = if (overlap == "nested") "nested" else TRUE,
           overlap_min = overlap_min(input$overlapMin),
           overlap_spacing = num(input$overlapSpacing)

@@ -60,6 +60,15 @@ ui_labels <- function(id, data) {
         text_field(ns("dy"), "Vertical offset", default = "0em"),
         switch_field(ns("adjustLabels"), "Move overlapping labels", TRUE)
       ),
+      field_group(
+        "Spread",
+        select_field(ns("spread"), "Spread on one line",
+                     c("Off" = NONE, "Below the genes" = "bottom", "Above the genes" = "top"),
+                     NONE,
+                     description = "Labels go on one row, moved apart, with a line to each gene."),
+        num_field(ns("leaderLength"), "Distance to genes (px)", min = 0, step = 1, default = 20),
+        switch_field(ns("leaderLine"), "Lines to genes", TRUE)
+      ),
       field_group("Group styles", group_style_fields(ns, data, "tnsA, cas8f: fill = white"))
     )
   )
@@ -88,6 +97,7 @@ server_labels <- function(id, r) {
       update_block_switch(session, "show", checked = TRUE)
     }, ignoreInit = TRUE)
     reactive({
+      spread <- opt(input$spread)
       list(
         args = compact(list(
           label = opt(input$label),
@@ -100,7 +110,13 @@ server_labels <- function(id, r) {
           compact(list(
             y = num(input$y),
             dy = txt(input$dy),
-            adjustLabels = if (identical(input$adjustLabels, FALSE)) FALSE
+            adjustLabels = if (!is.null(spread)) "spread" else
+              if (identical(input$adjustLabels, FALSE)) FALSE,
+            spreadPosition = if (identical(spread, "top")) "top",
+            leaderLine = if (!is.null(spread)) {
+              if (identical(input$leaderLine, FALSE)) FALSE else
+                if (!is.null(num(input$leaderLength))) list(length = num(input$leaderLength))
+            }
           ))
         )
       )
