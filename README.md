@@ -65,11 +65,12 @@ Clicking a gene, gene label, coordinate, cluster text, legend label or legend
 marker selects it and opens **Element**; clicking another part of the chart
 opens its settings.
 The editor fills its fields with the current values. Only changed fields become
-individual overrides; clearing a field restores the chart settings. Legend
-patch edits affect the patch, while gene colours are configured under **Colors**.
+individual overrides; clearing a field restores the chart settings. A legend
+marker's colour and pattern also apply to the genes in its group. Its opacity
+and border affect only the legend patch.
 
-Changes apply right away and are added to the R code as `GC_element_style()`
-calls. **Reset** removes the element's own style. **Reset all**, shown when
+Changes apply right away. Group colours and patterns are included in the R code
+as `GC_color()` and `GC_pattern()` calls; individual styles use `GC_element_style()`. **Reset** removes the element's own style. **Reset all**, shown when
 nothing is selected, removes every individual override. The switch above the
 settings moves between the selected element and all elements of its kind.
 Colour fields share swatches and a custom colour picker throughout the app.

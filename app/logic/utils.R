@@ -206,3 +206,37 @@ pick_choice <- function(r, id, current, choices, fallback) {
   }
   if (length(current) > 0 && all(current %in% choices)) current else fallback
 }
+
+# The order in which GC_pattern(patterns = NULL) gives the groups a pattern
+DEFAULT_PATTERN_ORDER <- c("diagonal", "dots", "horizontal", "crosshatch", "vertical", "zigzag",
+                           "checkerboard", "solid", "rings", "bricks", "inverseDots", "grid",
+                           "wideStripes", "plus", "antidiagonal")
+
+#' The pattern settings of the Colors section with the patterns and pattern
+#' colours of single groups (set on their legend markers). Without patterns
+#' in Colors, those groups get theirs on top of the gene colours.
+#' @export
+with_group_patterns <- function(settings, values, patterns, colors) {
+  groups <- as.character(unique(values[!is.na(values)]))
+  shown <- isTRUE(settings$show)
+  args <- if (shown) settings$args else list(background = NULL)
+  # The pattern of every group, as GC_pattern() gives them
+  current <- args$patterns
+  current <- if (!shown) rep("none", length(groups))
+  else if (is.null(current)) {
+    order <- DEFAULT_PATTERN_ORDER[(seq_along(groups) - 1) %% length(DEFAULT_PATTERN_ORDER) + 1]
+    replace(order, groups == "No Hit", "none")
+  } else if (is.list(current)) vapply(groups, function(g) current[[g]] %||% "none", "")
+  else rep_len(as.character(current), length(groups))
+  current <- utils::modifyList(stats::setNames(as.list(current), groups), patterns)
+  # Groups left out of a named list get no pattern
+  current <- Filter(function(p) !identical(p, "none"), current)
+  if (length(current) == 0) return(list(show = FALSE, args = args))
+  args$patterns <- current
+  if (length(colors)) {
+    color <- args$color %||% "black"
+    color <- if (is.list(color)) color else stats::setNames(as.list(rep_len(color, length(groups))), groups)
+    args$color <- utils::modifyList(color, colors)
+  }
+  list(show = TRUE, args = args)
+}

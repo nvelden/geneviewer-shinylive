@@ -48,3 +48,21 @@ test_that("legend availability follows the group mapping without resetting setti
     expect_false(messages[["gv-legend-availability"]]$available)
   })
 })
+
+test_that("patterns set on legend markers merge with the pattern settings of Colors", {
+  box::use(../../app/logic/utils[with_group_patterns])
+  groups <- c("A", "B", "A", "No Hit", "C")
+  # Without patterns in Colors: only that group, on its gene colour
+  off <- with_group_patterns(list(show = FALSE), groups, list(B = "dots"), list())
+  expect_true(off$show)
+  expect_equal(off$args$patterns, list(B = "dots"))
+  expect_true("background" %in% names(off$args) && is.null(off$args$background))
+  # One pattern per group in Colors: the others keep theirs
+  on <- with_group_patterns(list(show = TRUE, args = list(background = "white")), groups,
+                            list(B = "none"), list(A = "red"))
+  expect_equal(on$args$patterns, list(A = "diagonal", C = "crosshatch"))
+  expect_equal(on$args$color$A, "red")
+  expect_equal(on$args$color$C, "black")
+  # No pattern left: no GC_pattern()
+  expect_false(with_group_patterns(list(show = FALSE), groups, list(B = "none"), list())$show)
+})

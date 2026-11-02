@@ -53,7 +53,18 @@ const assert=require('node:assert/strict');
  assert.equal(await page.$('[data-sb-input-id="element-fontSize"] input'),null);
  await page.click('#element-fields .gv-swatch[title="#2ca02c"]');
  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#gcChart .legend-marker')).fill==='rgb(44, 160, 44)');
- assert.ok((await code()).includes('part = "marker"'));
+ // The colour of a legend marker is the colour of its group's genes
+ const markerGroup=await page.evaluate(()=>Shiny.shinyapp.$inputValues.gcChart_select.data);
+ await page.waitForFunction(()=>[...document.querySelectorAll('#gcChart .gene')].some(g=>getComputedStyle(g).fill==='rgb(44, 160, 44)'));
+ assert.ok((await code()).includes('GC_color') && (await code()).includes('#2ca02c'));
+ assert.ok(!(await code()).includes('part = "marker"'));
+ // A pattern on the marker fills the group's genes too
+ await page.evaluate(()=>{const s=document.querySelector('[data-sb-input-id="element-pattern"] select');s.value='dots';s.dispatchEvent(new Event('change',{bubbles:true}));});
+ await page.waitForFunction(()=>getComputedStyle(document.querySelector('#gcChart .legend-marker')).fill.startsWith('url('));
+ await page.waitForFunction(()=>[...document.querySelectorAll('#gcChart .gene')].some(g=>getComputedStyle(g).fill.startsWith('url(')));
+ await page.waitForFunction(g=>{const c=document.querySelector('#chartCode')?.textContent||'';return c.includes('GC_pattern') && c.includes('"dots"') && c.includes(g)},{},String(markerGroup));
+ // The fields follow the redrawn marker before the next click
+ await new Promise(r=>setTimeout(r,1000));
  await page.click('.gv-scope-option:nth-child(2)');
  await page.waitForFunction(()=>Shiny.shinyapp.$inputValues.section==='legend' && document.querySelector('.gv-scope')?.textContent.includes('All legend markers'));
  await page.click('.gv-scope-option:nth-child(1)');

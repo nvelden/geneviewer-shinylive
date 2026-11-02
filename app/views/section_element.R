@@ -19,6 +19,13 @@ box::use(
 # Border line styles, as stroke-dasharray
 DASHES <- c("Solid" = "none", "Dashed" = "6 3", "Dotted" = "1.5 2")
 
+# Patterns of a group's genes and legend marker (GC_pattern())
+PATTERNS <- c("None" = "none", "Solid" = "solid", "Horizontal" = "horizontal",
+              "Vertical" = "vertical", "Diagonal" = "diagonal", "Antidiagonal" = "antidiagonal",
+              "Grid" = "grid", "Crosshatch" = "crosshatch", "Dots" = "dots", "Zigzag" = "zigzag",
+              "Checkerboard" = "checkerboard", "Rings" = "rings", "Bricks" = "bricks",
+              "Plus" = "plus", "Wide stripes" = "wideStripes", "Inverse dots" = "inverseDots")
+
 MARKERS <- c("Arrow" = "arrow", "Box arrow" = "boxarrow", "Box" = "box",
              "Capsule" = "cbox", "Rounded box" = "rbox")
 
@@ -320,7 +327,9 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       style <- isolate(edits()[[key(item)]]$style)
       drawn <- function(name) field_value(name, item$drawn[[name]])
       value <- function(name) {
-        if (!is.null(style[[name]])) field_value(name, style[[name]]) else drawn(name)
+        if (!is.null(style[[name]])) field_value(name, style[[name]])
+        # A patterned fill is no colour to show
+        else if (grepl("^url\\(", drawn(name))) "" else drawn(name)
       }
       gene <- item$component == "genes"
       legend_marker <- item$component == "legend" && identical(item$part, "marker")
@@ -382,8 +391,19 @@ server_element <- function(id, data_key, open_section, section = function() NULL
         if (item$component %in% WHOLE_SCALE) tags$p(class = "gv-element-hint",
           "Drag anywhere on the scale to move it as a whole. Appearance settings are in Scale.")
         else if (legend_marker) tags$div(
-          fill(), border(),
-          tags$p(class = "gv-element-hint", "These settings change the legend patch. Gene colours are set under Colors.")
+          field_group("Fill",
+            color_input(ns, "fill", "Color", value("fill")),
+            tags$p(class = "gv-element-hint", "Also the colour of the genes of this group."),
+            num_input(ns, "opacity", "Opacity", value("opacity"), min = 0, max = 1, step = 0.1)
+          ),
+          field_group("Pattern",
+            select_input(ns, "pattern", "Pattern", PATTERNS, value("pattern")),
+            color_input(ns, "patternColor", "Color", value("patternColor")),
+            tags$p(class = "gv-element-hint",
+                   "Fills the genes of this group too, drawn on their colour unless Colors sets a background.")
+          ),
+          border(),
+          tags$p(class = "gv-element-hint", "Opacity and border change only the legend patch.")
         ) else if (gene) tags$div(
           fill(),
           field_group("Shape",
@@ -418,6 +438,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
       style <- if (item$component %in% WHOLE_SCALE) list()
       else if (item$component == "legend" && identical(item$part, "marker")) list(
         fill = txt(input$fill), opacity = num(input$opacity),
+        pattern = opt(input$pattern), patternColor = txt(input$patternColor),
         stroke = txt(input$stroke), strokeWidth = num(input$strokeWidth),
         strokeDasharray = opt(input$strokeDasharray)
       ) else if (item$component == "genes") list(
@@ -454,7 +475,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
                       input$arrowheadWidth, input$arrowheadHeight, input$stroke,
                       input$strokeWidth, input$strokeDasharray, input$y, input$text,
                       input$hide, input$fontSize, input$fontWeight, input$fontStyle,
-                      input$fontFamily,
+                      input$fontFamily, input$pattern, input$patternColor,
                       input$rotate, input$moveX, input$moveY), {
       item <- target()
       if (is.null(item) || !identical(input$token, item$token)) return()
@@ -542,7 +563,7 @@ server_element <- function(id, data_key, open_section, section = function() NULL
 
     # A swatch fills in its colour field, as if typed
     observeEvent(input$pick, {
-      req(target(), input$pick$field %in% c("fill", "stroke"))
+      req(target(), input$pick$field %in% c("fill", "stroke", "patternColor"))
       update_block_input(session, input$pick$field, value = input$pick$value)
     })
     observeEvent(input$reset, {

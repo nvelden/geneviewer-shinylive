@@ -11,7 +11,7 @@ box::use(
   ./views/section_compare[server_links, server_alignment, server_tooltip, server_size],
   ./views/section_zoom[server_zoom],
   ./logic/setup[server_group_setup],
-  ./logic/utils[make_named_color_list, order_cluster_data, cluster_values, opt],
+  ./logic/utils[make_named_color_list, with_group_patterns, order_cluster_data, cluster_values, opt],
   ./logic/code_gen[chart_code, data_code],
   ./logic/examples[EXAMPLES],
   ./logic/project[write_project, read_project],
@@ -463,6 +463,28 @@ function(input, output, session) {
       make_named_color_list(data, group, colors$customColors)
     }
 
+    # Colours and patterns set on a legend marker belong to its group: its
+    # genes take them too, through GC_color() and GC_pattern()
+    element_edits <- element_editor$edits()
+    marker_edits <- Filter(function(edit) edit$component == "legend" &&
+                             identical(edit$id$part, "marker"), element_edits)
+    group_style <- function(name) {
+      values <- lapply(marker_edits, function(edit) edit$style[[name]])
+      groups <- vapply(marker_edits, function(edit) as.character(edit$id$group), "")
+      keep <- !vapply(values, is.null, logical(1))
+      stats::setNames(values[keep], groups[keep])
+    }
+    marker_fills <- group_style("fill")
+    if (length(marker_fills)) custom_colors <- utils::modifyList(custom_colors %||% list(), marker_fills)
+    group_patterns <- colors$patterns
+    marker_patterns <- group_style("pattern")
+    marker_pattern_colors <- group_style("patternColor")
+    if (!is.null(group) && group %in% names(data) &&
+        length(marker_patterns) + length(marker_pattern_colors) > 0) {
+      group_patterns <- with_group_patterns(colors$patterns, data[[group]],
+                                            marker_patterns, marker_pattern_colors)
+    }
+
     # Overlapping genes on separate tracks, before the genes are styled by them
     if (!is.null(genes$cluster)) chart <- add(chart, "GC_cluster", genes$cluster)
 
@@ -488,9 +510,9 @@ function(input, output, session) {
                customColors = custom_colors)) |>
       add("GC_tooltip", tooltip$args)
 
-    if (colors$patterns$show) {
+    if (group_patterns$show) {
       # background = NULL draws the patterns on top of the gene colours
-      chart <- add(chart, "GC_pattern", colors$patterns$args, keep_null = TRUE)
+      chart <- add(chart, "GC_pattern", group_patterns$args, keep_null = TRUE)
     }
     if (tooltip$trackMouse) {
       chart <- add(chart, "GC_trackMouse")
@@ -518,8 +540,13 @@ function(input, output, session) {
     }
 
     # Styles of single genes and labels (the Element section)
-    for (edit in element_editor$edits()) {
-      chart <- add(chart, "GC_element_style", c(list(component = edit$component), edit$id, edit$style))
+    for (edit in element_edits) {
+      style <- edit$style
+      if (edit$component == "legend" && identical(edit$id$part, "marker")) {
+        style[c("fill", "pattern", "patternColor")] <- NULL
+        if (length(style) == 0) next
+      }
+      chart <- add(chart, "GC_element_style", c(list(component = edit$component), edit$id, style))
     }
 
     data_source <- tryCatch(
