@@ -117,6 +117,18 @@
   color: var(--muted-foreground);
 }
 
+/* Below the chart when gene labels are hidden or empty (a shinyblocks
+   warning alert) */
+.gv-label-note {
+  margin-top: 0.75rem;
+}
+.gv-label-note[hidden] {
+  display: none;
+}
+.gv-label-note .sb-alert-description p {
+  margin: 0;
+}
+
 /* The chart keeps a white sheet, also in dark mode, and its full height */
 .gv-canvas {
   flex: none;

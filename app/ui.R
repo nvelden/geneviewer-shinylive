@@ -19,7 +19,7 @@ data <- geneviewer::ophA_clusters
 # Settings sections: nav label, icon, panel title and description, and content
 sections <- list(
   data        = list("Data", "database", "Gene data",
-                     "Load CSV or GenBank files and pick the columns to use.", ui_data("data", data)),
+                     "Load CSV, GenBank or FASTA files and pick the columns to use.", ui_data("data", data)),
   theme       = list("Theme", "sparkles", "Theme",
                      "Start from a built-in look and set the fonts and colours of the whole chart.", ui_theme("theme")),
   genes       = list("Genes", "layers", "Genes",
@@ -128,7 +128,7 @@ ui <- block_page(
     )
   ),
   tags$head(
-    tags$link(rel = "stylesheet", href = "app.css?v=20261029-project"),
+    tags$link(rel = "stylesheet", href = "app.css?v=20261103-label-note"),
     tags$link(rel = "icon", type = "image/png", sizes = "16x16", href = "favicon-16x16.png"),
     tags$link(rel = "apple-touch-icon", href = "apple-touch-icon.png"),
     # Picking a section, or clicking a part of the chart, opens the settings
@@ -192,6 +192,62 @@ ui <- block_page(
       document.addEventListener('geneviewer:rendered', function (event) {
         if (event.target.id === 'gcChart') gvLoaded(event.detail.id);
       });
+      // Note below the chart when gene labels are hidden because they do not
+      // fit, or have no text, so a chart without them does not look complete
+      var gvLabelNote = function () {
+        var chart = document.getElementById('gcChart');
+        var note = document.getElementById('gv-label-note');
+        if (!chart || !note) return;
+        var hidden = 0, shown = 0, empty = 0;
+        chart.querySelectorAll('[data-cluster]').forEach(function (cluster) {
+          if (cluster.parentElement.closest('[data-cluster]')) return;
+          // Zoomed in, labels of genes out of the window do not count
+          var clip = cluster.querySelector('.geneviewer-zoom-clip');
+          var view = clip && clip.getBoundingClientRect();
+          var genes = {};
+          cluster.querySelectorAll('.gene').forEach(function (gene) {
+            if (gene.__data__) genes[gene.__data__.rowID] = gene;
+          });
+          cluster.querySelectorAll('text.label').forEach(function (label) {
+            var gene = label.__data__ && genes[label.__data__.rowID];
+            if (view && gene) {
+              var box = gene.getBoundingClientRect();
+              if (box.right < view.left || box.left > view.right) return;
+            }
+            if (!label.textContent.trim()) empty++;
+            else if (getComputedStyle(label).display === 'none') hidden++;
+            else shown++;
+          });
+        });
+        var parts = [];
+        var spread = (Shiny.shinyapp.$inputValues['labels-spread'] || '__none__') !== '__none__';
+        var column = Shiny.shinyapp.$inputValues['labels-label'];
+        if (hidden) parts.push(hidden + ' hidden because ' +
+                               (spread ? 'they do not fit on one line. Zoom in or make the chart wider to see them.'
+                                       : 'they would overlap. Zoom in, make the chart taller, or spread the labels under Gene labels to see them.'));
+        if (empty) parts.push(empty + ' without text in the label column' + (column ? ' (' + column + ')' : '') +
+                              '. Pick another column under Gene labels to label them.');
+        var total = hidden + shown + empty;
+        note.querySelector('.sb-alert-title').textContent =
+          'Labels shown for ' + shown + ' of ' + total + ' genes';
+        note.hidden = parts.length === 0;
+        var description = note.querySelector('.sb-alert-description');
+        description.replaceChildren.apply(description, parts.map(function (text) {
+          var line = document.createElement('p');
+          line.textContent = text;
+          return line;
+        }));
+      };
+      var gvLabelTimer = null;
+      var gvLabelObserver = new MutationObserver(function () {
+        clearTimeout(gvLabelTimer);
+        gvLabelTimer = setTimeout(gvLabelNote, 200);
+      });
+      $(function () {
+        var chart = document.getElementById('gcChart');
+        if (chart) gvLabelObserver.observe(chart, {subtree: true, childList: true, attributes: true,
+                                                   attributeFilter: ['style', 'transform']});
+      });
       $(document).on('shiny:error', function (event) {
         if (event.name === 'gcChart') gvLoaded(gvLoading);
       });
@@ -242,6 +298,15 @@ ui <- block_page(
         )
       ),
       tags$div(class = "gv-canvas", GC_chartOutput("gcChart", width = "100%", height = "auto")),
+      # Styled as a shinyblocks warning alert, whose styles apply within a
+      # shinyblocks root
+      tags$div(id = "gv-label-note", class = "gv-label-note", hidden = NA, role = "status",
+               `data-shinyblocks-root` = "",
+               tags$div(class = "sb-alert sb-alert-warning",
+                        tags$div(class = "sb-alert-icon", block_icon("alert-triangle", size = "sm")),
+                        tags$div(class = "sb-alert-content",
+                                 tags$h5(class = "sb-alert-title", "Not all gene labels are shown"),
+                                 tags$div(class = "sb-alert-description")))),
       block_accordion(
         type = "single",
         collapsible = TRUE,
