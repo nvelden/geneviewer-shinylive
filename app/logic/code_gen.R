@@ -175,7 +175,15 @@ data_code <- function(files, cluster_col = NULL, order = NULL, example_code = NU
         "}))"
       )
     } else {
-      sprintf("data <- read_fasta(%s)", paths)
+      paste0(
+        "# One cluster per FASTA file, named after the file\n",
+        "files <- ", paths, "\n",
+        "data <- dplyr::bind_rows(lapply(files, function(file) {\n",
+        "  genes <- read_fasta(file, sequence = FALSE)\n",
+        "  genes$cluster <- tools::file_path_sans_ext(basename(file))\n",
+        "  genes\n",
+        "}))"
+      )
     }
     code <- paste0("# Your uploaded data; set the path to your file(s)\n", code)
   }

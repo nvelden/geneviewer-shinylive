@@ -1,6 +1,6 @@
 #' Data section
 #'
-#' Upload of gene cluster files (CSV or GenBank) and the columns that hold the
+#' Upload of gene cluster files (CSV, GenBank or FASTA) and the columns that hold the
 #' start, end, cluster, group and strand of each gene.
 '.__module__.'
 
@@ -8,7 +8,7 @@ box::use(
   shiny[NS, moduleServer, reactive, observeEvent, req, tags, uiOutput, renderUI],
   shinyblocks[block_file_input, block_combobox, update_block_select,
               update_block_combobox, update_block_file_input, block_icon, show_toast],
-  ../logic/logic_load_controls[detect_columns, load_gene_data],
+  ../logic/logic_load_controls[detect_columns, load_gene_data, FASTA_EXTENSIONS],
   ../logic/ui_helpers[field, select_field, field_group, register_input, NONE],
   ../logic/utils[opt, pick_choice],
   ../logic/setup[setup_notice],
@@ -47,10 +47,10 @@ ui_data <- function(id, data) {
         variant = "dropzone",
         multiple = TRUE,
         append = TRUE,
-        accept = c(".csv", ".gbk", ".gb", ".json"),
+        accept = c(".csv", ".gbk", ".gb", paste0(".", FASTA_EXTENSIONS), ".json"),
         dropzone_icon = "upload",
         dropzone_label = "Drop files or click to upload",
-        dropzone_hint = paste("CSV, or GenBank files with one cluster each. Drop more to add them.",
+        dropzone_hint = paste("CSV, or GenBank or FASTA files with one cluster each. Drop more to add them.",
                               "Drop a saved project (.json) to open it.")
       ),
       tags$div(

@@ -60,28 +60,22 @@ load_csv <- function(filepaths) {
 #' Load gene data from FASTA file(s)
 #'
 #' @param filepaths Character vector of FASTA file paths
-#' @return Combined data frame
+#' @param filenames Character vector of original file names (same length as filepaths)
+#' @return Combined data frame, one cluster per file
 #' @export
-load_fasta <- function(filepaths) {
-  if (length(filepaths) == 1 && dir.exists(filepaths)) {
-    # Read all FASTA files from a directory
-    df <- geneviewer::read_fasta(
-      fasta_path     = filepaths,
-      sequence       = TRUE,
-      file_extension = "fasta"
-    )
-  } else {
-    # Combine multiple single-file reads
-    dfs <- lapply(filepaths, function(fp) {
-      geneviewer::read_fasta(
-        fasta_path = fp,
-        sequence   = TRUE
-      )
-    })
-    df <- dplyr::bind_rows(dfs)
-  }
+load_fasta <- function(filepaths, filenames) {
+  dfs <- Map(function(fp, fn) {
+    df <- geneviewer::read_fasta(fp, sequence = FALSE)
+    if (nrow(df) == 0) {
+      stop(sprintf(paste("No genes found in %s: the FASTA headers need key=value pairs",
+                         "with the location of each gene, e.g. [location=complement(100..400)]."), fn))
+    }
+    # The uploaded file has a temporary name; name the cluster after the file
+    df$cluster <- tools::file_path_sans_ext(basename(fn))
+    df
+  }, filepaths, filenames)
 
-  return(df)
+  dplyr::bind_rows(dfs)
 }
 
 #' Load gene data from GBK file(s)
@@ -118,7 +112,11 @@ load_gbk <- function(filepaths, filenames) {
   dplyr::bind_rows(dfs)
 }
 
-#' Load gene data from a list of CSV or GBK files (not mixed)
+#' File extensions read as FASTA
+#' @export
+FASTA_EXTENSIONS <- c("fasta", "fa", "faa", "fas")
+
+#' Load gene data from a list of CSV, GBK or FASTA files (not mixed)
 #'
 #' @param fileInput A data frame from Shiny fileInput() or a character vector of file paths
 #' @return Combined data frame
@@ -140,21 +138,23 @@ load_gene_data <- function(fileInput) {
     stop("No file paths provided.")
   }
 
-  # Determine file extensions based on original filenames
-  extensions <- unique(tolower(tools::file_ext(filenames)))
+  # Determine the file type based on the original filenames
+  extensions <- tolower(tools::file_ext(filenames))
+  types <- unique(ifelse(extensions %in% c("gbk", "gb"), "gbk",
+                         ifelse(extensions %in% FASTA_EXTENSIONS, "fasta", extensions)))
 
-  if (length(extensions) > 1) {
-    stop("Files must all be of the same type. Mixing CSV and GBK files is not allowed.")
+  if (length(types) > 1) {
+    stop("Files must all be of the same type. Mixing CSV, GenBank and FASTA files is not allowed.")
   }
 
-  ext <- extensions[1]
+  ext <- types[1]
 
   if (ext == "csv") {
     return(load_csv(filepaths))
-  } else if (ext %in% c("gbk", "gb")) {
+  } else if (ext == "gbk") {
     return(load_gbk(filepaths, filenames))
-  } else if (ext %in% c("fasta", "fa", "faa")) {
-    return(load_fasta(filepaths))
+  } else if (ext == "fasta") {
+    return(load_fasta(filepaths, filenames))
   } else {
     stop(paste("Unsupported file type:", ext))
   }
