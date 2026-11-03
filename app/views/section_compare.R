@@ -5,7 +5,7 @@ box::use(
   shiny[NS, moduleServer, reactive, observeEvent, req, tags,
         conditionalPanel, uiOutput, renderUI, renderText, textOutput, outputOptions],
   shinyblocks[block_combobox, update_block_select, update_block_combobox,
-              block_file_input, update_block_file_input, show_toast],
+              block_file_input, update_block_file_input, show_toast, block_icon],
   ../logic/ui_helpers[color_field, field, text_field, num_field, select_field, switch_field,
                       textarea_field, field_group, sections, when_on, when_value, register_input,
                       ALIGNMENTS, NONE],
