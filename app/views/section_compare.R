@@ -38,8 +38,11 @@ ui_links <- function(id, data) {
         alignment(
           uiOutput(ns("alignmentSummary")),
           block_file_input(ns("alignmentFile"), accept = ".csv", multiple = FALSE),
-          tags$p(class = "gv-switch-description",
-                 "CSV columns: cluster1, start1, end1, cluster2, start2, end2. Optional identity or similarity (%). Keep start > end for inverted blocks.")
+          tags$div(
+            class = "gv-dataset-actions",
+            tags$a(class = "gv-button-outline", href = "alignment_example.csv", download = NA,
+                   block_icon("download", size = "sm"), "Example CSV")
+          )
         )
       )
     ),
